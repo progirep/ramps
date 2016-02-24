@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 struct MDPState {
     std::string label;
@@ -20,10 +21,16 @@ struct MDP {
     std::vector<MDPState> states;
     std::vector<std::vector<MDPTransition> > transitions;
     unsigned int initialState; // is (unsigned int)-1 if undefined
+
+    MDP() : initialState(-1) {}
     MDP(std::string baseFilename);
+
+    std::vector<double> valueIteration(const std::map<unsigned int, double> &fixedValues) const;
+
 };
 
 struct ParityMDP {
+private:
     std::vector<std::string> actions;
     std::vector<MDPState> states;
     std::vector<std::vector<MDPTransition> > transitions;
@@ -31,9 +38,12 @@ struct ParityMDP {
     unsigned int initialState; // is always 0
     unsigned int nofColors;
 
-    // Functions
+
+
+public:
     ParityMDP(std::string parityFilename, const MDP &baseMDP);
     void dumpDot(std::ostream &output) const;
+    void computeRAPolicy(double raLevel) const;
 
 };
 

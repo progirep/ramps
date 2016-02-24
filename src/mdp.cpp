@@ -16,6 +16,7 @@ MDP::MDP(std::string baseFilename) {
         std::ifstream stateFile(baseFilename+".sta");
         if (stateFile.fail()) {
             std::cerr << "Error: Could not open state file " << baseFilename+".sta" << std::endl;
+            throw 1;
         }
         std::string labelLine;
         std::getline(stateFile,labelLine);
@@ -49,6 +50,7 @@ MDP::MDP(std::string baseFilename) {
         std::ifstream labelFile(baseFilename+".lab");
         if (labelFile.fail()) {
             std::cerr << "Error: Could not open label file " << baseFilename+".lab" << std::endl;
+            throw 1;
         }
         std::string labelLine;
         std::getline(labelFile,labelLine);
@@ -92,6 +94,7 @@ MDP::MDP(std::string baseFilename) {
         std::ifstream transitionsFile(baseFilename+".tra");
         if (transitionsFile.fail()) {
             std::cerr << "Error: Could not open label file " << baseFilename+".tra" << std::endl;
+            throw 1;
         }
         std::string numbersLine;
         std::getline(transitionsFile,numbersLine);
@@ -133,7 +136,6 @@ MDP::MDP(std::string baseFilename) {
                 std::string rest;
                 isTransitionLine >> rest;
                 if (!isTransitionLine.fail()) {
-                    std::cerr << rest;
                     throw "Error reading transition file line: line is too long.";
                 }
 
@@ -147,7 +149,6 @@ MDP::MDP(std::string baseFilename) {
                     lastTransitionNumber = transitionNumber;
 
                     // Check if there is a label....
-                    std::cerr << "Registering action" << labelName << std::endl;
                     if (labelName!="") {
                         // Old action?
                         for (unsigned int i=0;i<actions.size();i++) {
@@ -174,10 +175,8 @@ MDP::MDP(std::string baseFilename) {
             auto &trB = trA[j];
             double sum = 0.0;
             for (auto &dat : trB.edges) {
-                std::cerr << ".";
                 sum += dat.first;
             }
-            std::cerr << "!";
             if ((sum<0.999) || (sum>1.001)) {
                 std::ostringstream err;
                 err << "Sum of probabilities for transition " << j << " from state " << i << " adds up to probability " << sum;
@@ -214,11 +213,9 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
         do {
             unsigned int color;
             is >> color;
-            if (!(is.eof())) {
-                parityColors.push_back(color);
-            }
-        } while (!is.fail());
-        if (is.bad()) throw "Error reading color line in Parity automaton";
+            parityColors.push_back(color);
+            if (is.bad()) throw "Error reading color line in Parity automaton";
+        } while (!is.eof());
     }
 
     // Parse transitions
@@ -246,10 +243,8 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
             if (is.bad()) throw "Error: Illegal parity automaton line";
 
             int numberOfAction = -1;
-            std::cerr << "#";
             for (unsigned int i=0;i<actions.size();i++) {
                 if (actions[i]==label) numberOfAction = i;
-                std::cerr << actions[i] << "-";
             }
             if (numberOfAction==-1) {
                 std::ostringstream os;
@@ -288,7 +283,7 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
 
         TODOTuple thisItem = todo.front();
         todo.pop_front();
-        // std::cerr << thisItem.mdpState << "," << thisItem.parityState << "," << thisItem.productState << std::endl;
+        std::cerr << thisItem.mdpState << "," << thisItem.parityState << "," << thisItem.productState << std::endl;
         while (transitions.size()<=thisItem.productState) transitions.push_back(std::vector<MDPTransition>());
 
         // Iterate through the transitions
@@ -308,14 +303,14 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
 
                 std::pair<unsigned int /*mdpState*/, unsigned int /*parityState*/> target(edge.second,parityTargetState);
                 if (stateMapper.count(target)==0) {
-                    std::cerr << "/: " << target.first << "," << target.second << std::endl;
                     stateMapper[target] = states.size();
                     todo.push_back(TODOTuple(states.size(),edge.second,parityTargetState));
                     std::ostringstream stateName;
                     stateName << baseMDP.states[edge.second].label;
                     stateName << "," << parityTargetState;
                     states.push_back(MDPState(stateName.str()));
-                    colors.push_back(parityColors[parityTargetState]);
+                    // std::cout << "XS: " << stateName.str() << std::endl;
+                    colors.push_back(parityColors.at(parityTargetState));
                     nofColors = std::max(nofColors,parityColors[parityTargetState]);
                 }
 

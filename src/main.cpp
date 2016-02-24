@@ -31,6 +31,7 @@ int main(int nofArgs, const char **args) {
         const MDP mdp(baseFilename);
         const ParityMDP parityMDP(baseFilename+".parity",mdp);
         parityMDP.dumpDot(std::cout);
+        parityMDP.computeRAPolicy(0.95);
 
     } catch (const char *error) {
         std::cerr << "Error: " << error << std::endl;
