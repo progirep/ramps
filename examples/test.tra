@@ -1,0 +1,18 @@
+4 nofTrans nofEdges
+0 0 1 0.8 nwA
+0 0 2 0.2 nwA
+0 0 1 0.2 nwB
+0 0 2 0.8 nwB
+1 0 0 0.8 neA
+1 0 3 0.2 neA
+1 0 0 0.2 neB
+1 0 3 0.8 neB
+2 0 0 0.8 swA
+2 0 3 0.2 swA
+2 0 0 0.2 swB
+2 0 3 0.8 swB
+3 0 1 0.8 seA
+3 0 2 0.2 seA
+3 0 1 0.2 seB
+3 0 2 0.8 seB
+

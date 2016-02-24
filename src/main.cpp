@@ -30,7 +30,7 @@ int main(int nofArgs, const char **args) {
         // Start computation
         const MDP mdp(baseFilename);
         const ParityMDP parityMDP(baseFilename+".parity",mdp);
-
+        parityMDP.dumpDot(std::cout);
 
     } catch (const char *error) {
         std::cerr << "Error: " << error << std::endl;

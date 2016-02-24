@@ -21,22 +21,24 @@ MDP::MDP(std::string baseFilename) {
         std::getline(stateFile,labelLine);
         std::string dataLine;
         while (std::getline(stateFile,dataLine)) {
-            auto separator = dataLine.find(":");
-            if (separator==std::string::npos) {
-                throw "Error in state file: expected a ':' in a data line.";
+            if (dataLine.length()>0) {
+                auto separator = dataLine.find(":");
+                if (separator==std::string::npos) {
+                    throw "Error in state file: expected a ':' in a data line.";
+                }
+                std::istringstream isStateNumber(dataLine.substr(0,separator));
+                unsigned int stateNr;
+                isStateNumber >> stateNr;
+                if (isStateNumber.fail()) {
+                    throw "Error in state file: Could not read state number.";
+                }
+                if (stateNr != states.size()) {
+                    std::ostringstream error;
+                    error << "Error in state file: Illegal state number in line '" << dataLine << "'";
+                    throw error.str();
+                }
+                states.push_back(MDPState(dataLine.substr(separator+1,std::string::npos)));
             }
-            std::istringstream isStateNumber(dataLine.substr(0,separator));
-            unsigned int stateNr;
-            isStateNumber >> stateNr;
-            if (isStateNumber.fail()) {
-                throw "Error in state file: Could not read state number.";
-            }
-            if (stateNr != states.size()) {
-                std::ostringstream error;
-                error << "Error in state file: Illegal state number in line '" << dataLine << "'";
-                throw error.str();
-            }
-            states.push_back(MDPState(dataLine.substr(separator+1,std::string::npos)));
         }
         transitions.resize(states.size());
     }
@@ -55,30 +57,32 @@ MDP::MDP(std::string baseFilename) {
         }
         std::string dataLine;
         while (std::getline(labelFile,dataLine)) {
-            auto separator = dataLine.find(": ");
-            if (separator==std::string::npos) {
-                throw "Error in label file: expected a ':' in a data line.";
-            }
-            std::istringstream isStateNumber(dataLine.substr(0,separator));
-            unsigned int stateNr;
-            isStateNumber >> stateNr;
-            if (isStateNumber.fail()) {
-                throw "Error in label file: Could not read state number.";
-            }
-            std::istringstream labelTypes(dataLine.substr(separator+2,std::string::npos));
-            int labelType;
-            while (labelTypes >> labelType) {
-                if (labelType==0) {
-                    if (initialState==(unsigned int)-1)
-                        initialState = stateNr;
-                    else
-                        throw "More than one initial state found.";
+            if (dataLine.length()>0) {
+                auto separator = dataLine.find(": ");
+                if (separator==std::string::npos) {
+                    throw "Error in label file: expected a ':' in a data line.";
                 }
-            }
-            if (labelTypes.bad()) {
-                std::ostringstream error;
-                error << "Illegal label file line:\n" << dataLine;
-                throw error.str();
+                std::istringstream isStateNumber(dataLine.substr(0,separator));
+                unsigned int stateNr;
+                isStateNumber >> stateNr;
+                if (isStateNumber.fail()) {
+                    throw "Error in label file: Could not read state number.";
+                }
+                std::istringstream labelTypes(dataLine.substr(separator+2,std::string::npos));
+                int labelType;
+                while (labelTypes >> labelType) {
+                    if (labelType==0) {
+                        if (initialState==(unsigned int)-1)
+                            initialState = stateNr;
+                        else
+                            throw "More than one initial state found.";
+                    }
+                }
+                if (labelTypes.bad()) {
+                    std::ostringstream error;
+                    error << "Illegal label file line:\n" << dataLine;
+                    throw error.str();
+                }
             }
         }
     }
@@ -105,50 +109,79 @@ MDP::MDP(std::string baseFilename) {
         unsigned int lastTransitionStartingState = (unsigned int)-1;
         unsigned int lastTransitionNumber = (unsigned int)-1;
         while (std::getline(transitionsFile,dataLine)) {
+            if (dataLine.length()>0) {
 
-            // Split the line into pieces
-            std::istringstream isTransitionLine(dataLine);
-            unsigned int stateNr;
-            unsigned int transitionNumber;
-            unsigned int target;
-            double probability;
-            std::string labelName;
-            isTransitionLine >> stateNr;
-            isTransitionLine >> transitionNumber;
-            isTransitionLine >> target;
-            isTransitionLine >> probability;
-            isTransitionLine >> labelName;
-            if (isTransitionLine.fail()) {
-                labelName = "";
-            }
-            std::string rest;
-            isTransitionLine >> rest;
-            if (!isTransitionLine.fail()) {
-                std::cerr << rest;
-                throw "Error reading transition file line: line is too long.";
-            }
+                // Split the line into pieces
+                std::istringstream isTransitionLine(dataLine);
+                unsigned int stateNr;
+                unsigned int transitionNumber;
+                unsigned int target;
+                double probability;
+                std::string labelName;
+                isTransitionLine >> stateNr;
+                if (isTransitionLine.fail()) throw "Error: Too short line in the transition file (1)";
+                isTransitionLine >> transitionNumber;
+                if (isTransitionLine.fail()) throw "Error: Too short line in the transition file (2)";
+                isTransitionLine >> target;
+                if (isTransitionLine.fail()) throw "Error: Too short line in the transition file (3)";
+                isTransitionLine >> probability;
+                if (isTransitionLine.fail()) throw "Error: Too short line in the transition file (4)";
+                isTransitionLine >> labelName;
+                if (isTransitionLine.fail()) {
+                    labelName = "";
+                }
+                std::string rest;
+                isTransitionLine >> rest;
+                if (!isTransitionLine.fail()) {
+                    std::cerr << rest;
+                    throw "Error reading transition file line: line is too long.";
+                }
 
-            // New transition needed?
-            if ((lastTransitionStartingState!=stateNr) || (transitionNumber != lastTransitionNumber)) {
-                // Allocate new transition
-                if (transitionNumber!=transitions[stateNr].size()) throw "Error in transition number.";
-                transitions[stateNr].push_back(MDPTransition());
-                lastTransition = &(transitions[stateNr].back());
-                lastTransitionStartingState = stateNr;
-                lastTransitionNumber = transitionNumber;
+                // New transition needed?
+                if ((lastTransitionStartingState!=stateNr) || (transitionNumber != lastTransitionNumber)) {
+                    // Allocate new transition
+                    if (transitionNumber!=transitions[stateNr].size()) throw "Error in transition number.";
+                    transitions[stateNr].push_back(MDPTransition());
+                    lastTransition = &(transitions[stateNr].back());
+                    lastTransitionStartingState = stateNr;
+                    lastTransitionNumber = transitionNumber;
 
-                // Check if there is a label....
-                if (labelName!="") {
-                    // Old action?
-                    for (unsigned int i=0;i<actions.size();i++) {
-                        if (actions[i]==labelName) lastTransition->action = i;
-                    }
-                    // New action?
-                    if (lastTransition->action==-1) {
-                        lastTransition->action = actions.size();
-                        actions.push_back(labelName);
+                    // Check if there is a label....
+                    std::cerr << "Registering action" << labelName << std::endl;
+                    if (labelName!="") {
+                        // Old action?
+                        for (unsigned int i=0;i<actions.size();i++) {
+                            if (actions[i]==labelName) lastTransition->action = i;
+                        }
+                        // New action?
+                        if (lastTransition->action==-1) {
+                            lastTransition->action = actions.size();
+                            actions.push_back(labelName);
+                        }
                     }
                 }
+
+                // Add an edge to the transition
+                lastTransition->edges.push_back(std::pair<double, unsigned int>(probability,target));
+            }
+        }
+    }
+
+    // Check probabilities
+    for (unsigned int i=0;i<transitions.size();i++) {
+        auto &trA = transitions[i];
+        for (unsigned int j=0;j<trA.size();j++) {
+            auto &trB = trA[j];
+            double sum = 0.0;
+            for (auto &dat : trB.edges) {
+                std::cerr << ".";
+                sum += dat.first;
+            }
+            std::cerr << "!";
+            if ((sum<0.999) || (sum>1.001)) {
+                std::ostringstream err;
+                err << "Sum of probabilities for transition " << j << " from state " << i << " adds up to probability " << sum;
+                throw err.str();
             }
         }
     }
@@ -213,8 +246,10 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
             if (is.bad()) throw "Error: Illegal parity automaton line";
 
             int numberOfAction = -1;
+            std::cerr << "#";
             for (unsigned int i=0;i<actions.size();i++) {
                 if (actions[i]==label) numberOfAction = i;
+                std::cerr << actions[i] << "-";
             }
             if (numberOfAction==-1) {
                 std::ostringstream os;
@@ -240,6 +275,10 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
     todo.push_back(TODOTuple(0,baseMDP.initialState,0));
     stateMapper[std::pair<unsigned int, unsigned int>(baseMDP.initialState,0)] = 0;
     colors.push_back(parityColors[0]);
+    std::ostringstream stateName;
+    stateName << baseMDP.states[baseMDP.initialState].label;
+    stateName << "," << 0;
+    states.push_back(MDPState(stateName.str()));
     nofColors = parityColors[0];
     initialState = 0;
     nofColors = 0; // Will be increased during execution
@@ -249,6 +288,8 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
 
         TODOTuple thisItem = todo.front();
         todo.pop_front();
+        // std::cerr << thisItem.mdpState << "," << thisItem.parityState << "," << thisItem.productState << std::endl;
+        while (transitions.size()<=thisItem.productState) transitions.push_back(std::vector<MDPTransition>());
 
         // Iterate through the transitions
         for (auto &tran : baseMDP.transitions[thisItem.mdpState]) {
@@ -267,7 +308,9 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
 
                 std::pair<unsigned int /*mdpState*/, unsigned int /*parityState*/> target(edge.second,parityTargetState);
                 if (stateMapper.count(target)==0) {
+                    std::cerr << "/: " << target.first << "," << target.second << std::endl;
                     stateMapper[target] = states.size();
+                    todo.push_back(TODOTuple(states.size(),edge.second,parityTargetState));
                     std::ostringstream stateName;
                     stateName << baseMDP.states[edge.second].label;
                     stateName << "," << parityTargetState;
@@ -276,8 +319,33 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
                     nofColors = std::max(nofColors,parityColors[parityTargetState]);
                 }
 
-                targetTransition.edges.push_back(std::pair<double,unsigned int>(edge.first,stateMapper[target]));
+                targetTransition.edges.push_back(std::pair<double,unsigned int>(edge.first,stateMapper.at(target)));
             }
+
+            transitions[thisItem.productState].push_back(targetTransition);
         }
     }
+}
+
+/**
+ * @brief Draws a parity MDP as DOT file.
+ * @param output The output stream.
+ */
+void ParityMDP::dumpDot(std::ostream &output) const {
+    output << "digraph dotFile {\n";
+    for (unsigned int i=0;i<states.size();i++) {
+        output << "  s" << i << "[label=\"" << states.at(i).label << "\",shape=rectangle];\n";
+    }
+    unsigned int edgeID = 0;
+    for (unsigned int i=0;i<transitions.size();i++) {
+        for (unsigned int j=0;j<transitions[i].size();j++) {
+            output << "  e" << edgeID << "[label=\"\",size=0.05,fixedsize=true,shape=point];\n";
+            output << "  s" << i << " -> e" << edgeID << "[label=\"" << actions[transitions[i][j].action] << "\",dir=none];\n";
+            for (auto &edge : transitions[i][j].edges) {
+                output << "  e" << edgeID << " -> s" << edge.second << "[label=\"" << edge.first << "\"];\n";
+            }
+            edgeID++;
+        }
+    }
+    output << "}\n";
 }

@@ -30,7 +30,10 @@ struct ParityMDP {
     std::vector<unsigned int> colors;
     unsigned int initialState; // is always 0
     unsigned int nofColors;
+
+    // Functions
     ParityMDP(std::string parityFilename, const MDP &baseMDP);
+    void dumpDot(std::ostream &output) const;
 
 };
 
