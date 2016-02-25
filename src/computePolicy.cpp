@@ -292,7 +292,7 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
         nofTargetColorSwitchbacks++;
     } while (winningOuterGoalStates.size()!=oldNofWinningOuterGoalStates);
 
-    // Compute strategy towards the goal states
+    // Compute outer strategy towards the goal states
     MDP mdpForAnalysis;
     mdpForAnalysis.actions = actions;
     mdpForAnalysis.initialState = initialState;
@@ -302,20 +302,27 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
     for (auto a : winningOuterGoalStates) {
         fixedValues[a] = 1.0;
     }
-    /*std::vector<std::pair<double,unsigned int> > values = mdpForAnalysis.valueIteration(fixedValues);
+    std::vector<std::pair<double,unsigned int> > values = mdpForAnalysis.valueIteration(fixedValues);
     for (unsigned int i=0;i<states.size();i++) {
-        if (values[i].first>=raLevel) {
+        /* if (values[i].first>=raLevel) */ {
             auto key = StrategyTransitionPredecessor(i,0);
             if (strategy.count(key)==0) {
-                strategy[key] = StrategyTransitionChoice(values[i].second);
-                // TODO: Add Memory update...
+                if (values[i].first!=0.0) { // Exact comparison with 0.0 is OK here.
+                    std::cerr << "Processing " << i << std::endl;
+                    std::map<unsigned int, unsigned int> newData;
+                    unsigned int chosenTransition = values[i].second;
+                    for (auto &e : mdpForAnalysis.transitions[i][chosenTransition].edges) {
+                        unsigned int dest = e.second;
+                        newData[dest] = 0;
+                    }
+                    strategy[key] = StrategyTransitionChoice(chosenTransition,newData);
+                }
             }
         }
-    }*/
+    }
 
     return strategy;
 }
-
 
 void ParityMDP::printPolicy(const std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> &policy) {
     std::cout << policy.size() << "\n";

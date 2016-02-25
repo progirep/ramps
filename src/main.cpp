@@ -30,10 +30,13 @@ int main(int nofArgs, const char **args) {
         // Start computation
         const MDP mdp(baseFilename);
         const ParityMDP parityMDP(baseFilename+".parity",mdp);
-        parityMDP.dumpDot(std::cout);
+        //parityMDP.dumpDot(std::cout);
         auto strategy = parityMDP.computeRAPolicy(0.95);
         parityMDP.printPolicy(strategy);
 
+    } catch (int error) {
+        std::cerr << "Numerical error " << error << std::endl;
+        return 1;
     } catch (const char *error) {
         std::cerr << "Error: " << error << std::endl;
         return 1;

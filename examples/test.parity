@@ -1,16 +1,16 @@
-2 1 0
-0 swA 1
-0 swB 1
-1 nwA 2
-1 nwB 2
-1 seA 2
-1 seB 2
-1 swA 2
-1 swB 2
-1 neA 0
-1 neB 0
+0 1 2
+0 swA 2
+0 swB 2
+2 nwA 1
+2 nwB 1
+2 seA 1
+2 seB 1
 2 swA 1
 2 swB 1
 2 neA 0
 2 neB 0
+1 swA 2
+1 swB 2
+1 neA 0
+1 neB 0
 
