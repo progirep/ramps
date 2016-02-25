@@ -203,8 +203,6 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                 std::list<unsigned int> todoNonBackup; // States in the mdpForAnalysis
                 std::set<unsigned int> doneNonBackup;
 
-                std::cerr << "Outer!\n";
-
                 // Fill todo list
                 for (auto it = currentGoalStates.begin(); it != currentGoalStates.end();it++ ){
                     auto key = StrategyTransitionPredecessor(*it,0);
@@ -213,8 +211,6 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                         doneNonBackup.insert(*it);
                     }
                 }
-
-                std::cerr << "gilled!\n";
 
                 // Add new parts to the strategy: First, the non-backup motion
                 std::list<unsigned int> todoBackup;
@@ -227,13 +223,14 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                     unsigned int thisOne = todoNonBackup.front();
                     todoNonBackup.pop_front();
 
-                    unsigned int srcData = strategy.count(StrategyTransitionPredecessor(thisOne,0))>0?strategyMemoryUsedSoFar:0;
+                    unsigned int srcData = currentGoalStates.count(thisOne)>0?0:strategyMemoryUsedSoFar;
                     unsigned int chosenTransition = values[thisOne].second;
                     std::cerr << "ChosenTransition: " << chosenTransition << std::endl;
                     std::map<unsigned int, unsigned int> newData;
                     if (values[thisOne].first!=0.0) { // Exact comparison with 0.0 is OK here.
                         for (auto &e : mdpForAnalysis.transitions[thisOne].at(chosenTransition).edges) {
                             unsigned int dest = e.second;
+                            std::cerr << "ISGOALSTATE: " << currentGoalStates.count(dest) << std::endl;
                             if (currentGoalStates.count(dest)>0) {
                                 newData[dest] = 0;
                             } else if (dest >= states.size()) {
@@ -245,12 +242,14 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                                 }
                             } else {
                                 newData[dest] = strategyMemoryUsedSoFar;
+                                std::cerr << "Yay!\n";
                                 if (doneNonBackup.count(dest)==0) {
                                     todoNonBackup.push_back(dest);
                                     doneNonBackup.insert(dest);
                                 }
                             }
                         }
+                        std::cerr << "Setting Strategy transitions for " << thisOne << " " << srcData << " non-backup.\n";
                         strategy[StrategyTransitionPredecessor(thisOne,srcData)] = StrategyTransitionChoice(chosenTransition,newData);
                     }
                 }
@@ -267,11 +266,11 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                         std::map<unsigned int, unsigned int> newData;
                         for (auto &e : mdpForAnalysis.transitions[thisOne][chosenTransition].edges) {
                             unsigned int dest = e.second;
-                            if (currentGoalStates.count(dest)>0) {
-                                newData[dest] = 0;
+                            if (currentGoalStates.count(dest % states.size())>0) {
+                                newData[dest % states.size()] = 0;
                             } else if (dest >= states.size()) {
                                 // Backup
-                                newData[dest] = strategyMemoryUsedSoFar;
+                                newData[dest % states.size()] = strategyMemoryUsedSoFar;
                                 if (doneBackup.count(dest)==0) {
                                     todoBackup.push_back(dest);
                                     doneBackup.insert(dest);
@@ -280,6 +279,7 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                                 throw "Internal error in the MDP-for-Analysis";
                             }
                         }
+                        std::cerr << "Setting Strategy transitions for " << thisOne % states.size() << " " << strategyMemoryUsedSoFar << " backup.\n";
                         strategy[StrategyTransitionPredecessor(thisOne % states.size(),strategyMemoryUsedSoFar)] = StrategyTransitionChoice(chosenTransition,newData);
                     }
                 }
@@ -302,7 +302,7 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
     for (auto a : winningOuterGoalStates) {
         fixedValues[a] = 1.0;
     }
-    std::vector<std::pair<double,unsigned int> > values = mdpForAnalysis.valueIteration(fixedValues);
+    /*std::vector<std::pair<double,unsigned int> > values = mdpForAnalysis.valueIteration(fixedValues);
     for (unsigned int i=0;i<states.size();i++) {
         if (values[i].first>=raLevel) {
             auto key = StrategyTransitionPredecessor(i,0);
@@ -311,16 +311,17 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                 // TODO: Add Memory update...
             }
         }
-    }
+    }*/
 
     return strategy;
 }
 
 
 void ParityMDP::printPolicy(const std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> &policy) {
-    for (auto entry : policy) {
+    std::cout << policy.size() << "\n";
+    for (auto &entry : policy) {
         std::cout << entry.first.mdpState << " " << entry.first.dataState << " " << entry.second.action << "\n";
-        for (auto entry2 : entry.second.memoryUpdate) {
+        for (auto &entry2 : entry.second.memoryUpdate) {
             std::cout << "-> " << entry2.first << " " << entry2.second << "\n";
         }
     }

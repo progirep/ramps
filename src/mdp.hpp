@@ -40,8 +40,9 @@ struct StrategyTransitionPredecessor{
 
     bool operator<(const StrategyTransitionPredecessor &other) const {
         int v1 = ((int)mdpState)-((int)other.mdpState);
-        if (v1!=0) return v1;
-        return ((int)dataState)-((int)other.dataState);
+        if (v1<0) return true;
+        if (v1>0) return false;
+        return ((int)dataState)-((int)other.dataState)<0;
     }
 };
 
@@ -50,7 +51,7 @@ struct StrategyTransitionChoice {
     std::map<unsigned int /* mdpstate */, unsigned int /* dataState */> memoryUpdate;
     StrategyTransitionChoice() : action((unsigned int)-1) {}
     StrategyTransitionChoice(unsigned int _action) : action(_action) {}
-    StrategyTransitionChoice(unsigned int _action, std::map<unsigned int /* mdpstate */, unsigned int /* dataState */> _memoryUpdate) : action(_action), memoryUpdate(_memoryUpdate) {}
+    StrategyTransitionChoice(unsigned int _action, const std::map<unsigned int /* mdpstate */, unsigned int /* dataState */> &_memoryUpdate) : action(_action), memoryUpdate(_memoryUpdate) {}
 };
 
 
