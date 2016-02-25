@@ -25,9 +25,34 @@ struct MDP {
     MDP() : initialState(-1) {}
     MDP(std::string baseFilename);
 
-    std::vector<double> valueIteration(const std::map<unsigned int, double> &fixedValues) const;
+    std::vector<std::pair<double,unsigned int> > valueIteration(const std::map<unsigned int, double> &fixedValues) const;
 
 };
+
+
+/**
+ * @brief This struct captures the precondition in a transition in the generated strategy. It is basically the look-up type for the map implementing the strategy
+ */
+struct StrategyTransitionPredecessor{
+    unsigned int mdpState;
+    unsigned int dataState;
+    StrategyTransitionPredecessor(unsigned int _mdpState,unsigned int _dataState) : mdpState(_mdpState), dataState(_dataState) {}
+
+    bool operator<(const StrategyTransitionPredecessor &other) const {
+        int v1 = ((int)mdpState)-((int)other.mdpState);
+        if (v1!=0) return v1;
+        return ((int)dataState)-((int)other.dataState);
+    }
+};
+
+struct StrategyTransitionChoice {
+    unsigned int action;
+    std::map<unsigned int /* mdpstate */, unsigned int /* dataState */> memoryUpdate;
+    StrategyTransitionChoice() : action((unsigned int)-1) {}
+    StrategyTransitionChoice(unsigned int _action) : action(_action) {}
+    StrategyTransitionChoice(unsigned int _action, std::map<unsigned int /* mdpstate */, unsigned int /* dataState */> _memoryUpdate) : action(_action), memoryUpdate(_memoryUpdate) {}
+};
+
 
 struct ParityMDP {
 private:
@@ -43,8 +68,9 @@ private:
 public:
     ParityMDP(std::string parityFilename, const MDP &baseMDP);
     void dumpDot(std::ostream &output) const;
-    void computeRAPolicy(double raLevel) const;
+    std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> computeRAPolicy(double raLevel) const;
 
+    static void printPolicy(const std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> &policy);
 };
 
 

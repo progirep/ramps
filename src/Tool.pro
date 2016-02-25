@@ -3,7 +3,7 @@ QMAKE_CC = gcc
 QMAKE_LINK_C = gcc
 QMAKE_CXX = g++
 QMAKE_LINK = g++
-DEFINES += NDEBUG
+DEFINES += # No NDEBUG here.
 CFLAGS += -g -fpermissive
 
 QMAKE_CFLAGS_RELEASE += -g
