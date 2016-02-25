@@ -131,7 +131,7 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
             mdpForAnalysis.states = states;
             // ---> Second copy of every state
             for (auto &s : states) {
-                mdpForAnalysis.states.push_back(MDPState(s.label+"'"));
+                mdpForAnalysis.states.push_back(MDPState(s.label));
             }
             // ---> First copy of every transition:
             mdpForAnalysis.transitions.resize(mdpForAnalysis.states.size());
@@ -186,7 +186,17 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                 // Debugging: Print
                 std::cerr << "Results of value iteration for minGoalColor:" << minGoalColor << std::endl;
                 for (unsigned int i=0;i<states.size();i++) {
-                    std::cerr << "- " << states[i].label << ": \t" << values[i].first << " by trans " << values[i].second << "\n";
+                    std::cerr << "- (";
+                    bool first = true;
+                    for (auto a : states[i].label) {
+                        if (first) {
+                            first = false;
+                        } else {
+                            std::cerr << ",";
+                        }
+                        std::cerr << a;
+                    }
+                    std::cerr << "): \t" << values[i].first << " by trans " << values[i].second << "\n";
                 }
 
                 // Update set of goal state that are reachable under the raLevel

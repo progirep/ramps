@@ -6,8 +6,8 @@
 #include <map>
 
 struct MDPState {
-    std::string label;
-    MDPState(std::string _label) : label(_label) {}
+    std::vector<std::string> label;
+    MDPState(std::vector<std::string> _label) : label(_label) {}
 };
 
 struct MDPTransition {
@@ -18,6 +18,7 @@ struct MDPTransition {
 
 struct MDP {
     std::vector<std::string> actions;
+    std::vector<std::string> labelComponents;
     std::vector<MDPState> states;
     std::vector<std::vector<MDPTransition> > transitions;
     unsigned int initialState; // is (unsigned int)-1 if undefined

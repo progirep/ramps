@@ -30,8 +30,8 @@ int main(int nofArgs, const char **args) {
         // Start computation
         const MDP mdp(baseFilename);
         const ParityMDP parityMDP(baseFilename+".parity",mdp);
-        //parityMDP.dumpDot(std::cout);
-        auto strategy = parityMDP.computeRAPolicy(0.95);
+        parityMDP.dumpDot(std::cout);
+        auto strategy = parityMDP.computeRAPolicy(0.5);
         parityMDP.printPolicy(strategy);
 
     } catch (int error) {

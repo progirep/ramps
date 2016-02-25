@@ -20,6 +20,21 @@ MDP::MDP(std::string baseFilename) {
         }
         std::string labelLine;
         std::getline(stateFile,labelLine);
+        {
+            // Parse label line
+            if (labelLine.at(0)!='(') throw "Illegal MDP state name pattern: no opening brace";
+            if (labelLine.at(labelLine.length()-1)!=')') throw "Illegal MDP state name pattern: no closing brace";
+            labelLine = labelLine.substr(1,labelLine.size()-2);
+            for (auto a = labelLine.find(","); a != std::string::npos;) {
+                // std::cerr << labelLine << "\n";
+                labelComponents.push_back(labelLine.substr(0,a));
+                labelLine = labelLine.substr(a+1,std::string::npos);
+                a = labelLine.find(",");
+            }
+            labelComponents.push_back(labelLine);
+
+        }
+
         std::string dataLine;
         while (std::getline(stateFile,dataLine)) {
             if (dataLine.length()>0) {
@@ -38,7 +53,20 @@ MDP::MDP(std::string baseFilename) {
                     error << "Error in state file: Illegal state number in line '" << dataLine << "'";
                     throw error.str();
                 }
-                states.push_back(MDPState(dataLine.substr(separator+1,std::string::npos)));
+
+                // Parse the state label
+                std::vector<std::string> labelParts;
+                std::string label = dataLine.substr(separator+1,std::string::npos);
+                if (label.at(0)!='(') throw "Illegal MDP state name: no opening brace";
+                if (label.at(label.length()-1)!=')') throw "Illegal MDP state name: no closing brace";
+                label = label.substr(1,label.size()-2);
+                for (auto a = label.find(","); a != std::string::npos;) {
+                    labelParts.push_back(label.substr(0,a));
+                    label = label.substr(a+1,std::string::npos);
+                    a = label.find(",");
+                }
+                labelParts.push_back(label);
+                states.push_back(MDPState(labelParts));
             }
         }
         transitions.resize(states.size());
@@ -219,7 +247,7 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
     }
 
     // Parse transitions
-    std::map<std::pair<unsigned int, unsigned int>,unsigned int> parityTransitions;
+    std::map<std::pair<unsigned int, std::string>,unsigned int> parityTransitions;
     std::string data;
     while (std::getline(inFile,data)) {
         if (data.length()>0) {
@@ -242,16 +270,7 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
             is >> to;
             if (is.bad()) throw "Error: Illegal parity automaton line";
 
-            int numberOfAction = -1;
-            for (unsigned int i=0;i<actions.size();i++) {
-                if (actions[i]==label) numberOfAction = i;
-            }
-            if (numberOfAction==-1) {
-                std::ostringstream os;
-                os << "Error: Did not find '" << label << "' as action in the MDP.";
-                throw os.str();
-            }
-            std::pair<unsigned int, unsigned int> data(from,numberOfAction);
+            std::pair<unsigned int, std::string> data(from,label);
             if (parityTransitions.count(data)>0) throw "Error: The parity automaton is non-deterministic.";
             parityTransitions[data] = to;
         }
@@ -270,10 +289,11 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
     todo.push_back(TODOTuple(0,baseMDP.initialState,0));
     stateMapper[std::pair<unsigned int, unsigned int>(baseMDP.initialState,0)] = 0;
     colors.push_back(parityColors[0]);
-    std::ostringstream stateName;
-    stateName << baseMDP.states[baseMDP.initialState].label;
-    stateName << "," << 0;
-    states.push_back(MDPState(stateName.str()));
+    {
+        std::vector<std::string> stateLabel = baseMDP.states[baseMDP.initialState].label;
+        stateLabel.push_back("0");
+        states.push_back(MDPState(stateLabel));
+    }
     nofColors = parityColors[0];
     initialState = 0;
     nofColors = 0; // Will be increased during execution
@@ -283,7 +303,7 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
 
         TODOTuple thisItem = todo.front();
         todo.pop_front();
-        std::cerr << thisItem.mdpState << "," << thisItem.parityState << "," << thisItem.productState << std::endl;
+        // std::cerr << thisItem.mdpState << "," << thisItem.parityState << "," << thisItem.productState << std::endl;
         while (transitions.size()<=thisItem.productState) transitions.push_back(std::vector<MDPTransition>());
 
         // Iterate through the transitions
@@ -291,7 +311,7 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
             MDPTransition targetTransition;
             targetTransition.action = tran.action;
 
-            std::pair<unsigned int /*parityState*/, unsigned int /*action*/> parityEdge(thisItem.parityState,tran.action);
+            std::pair<unsigned int /*parityState*/, std::string /*action*/> parityEdge(thisItem.parityState,actions[tran.action]);
             unsigned int parityTargetState;
             if (parityTransitions.count(parityEdge)==0) {
                 parityTargetState = thisItem.parityState;
@@ -299,19 +319,50 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
                 parityTargetState = parityTransitions[parityEdge];
             }
 
+            // Iterate over the transitions
             for (auto &edge : tran.edges) {
 
-                std::pair<unsigned int /*mdpState*/, unsigned int /*parityState*/> target(edge.second,parityTargetState);
+                // Check if we have a new target parity state
+                unsigned int edgeParityTargetState = parityTargetState;
+
+                // If there is a '=' in the parity action name, then this refers to the state component
+                for (auto &a : parityTransitions) {
+                    if (a.first.first == thisItem.parityState) {
+                        if (a.first.second.find("=")!=std::string::npos) {
+
+                            // This is a compound action -> interpret appropriately
+                            std::string varName = a.first.second.substr(0,a.first.second.find("="));
+                            std::string varValue = a.first.second.substr(a.first.second.find("=")+1,std::string::npos);
+
+                            // Find state component
+                            int index = -1;
+                            for (unsigned int i=0;i<baseMDP.labelComponents.size();i++) {
+                                if (baseMDP.labelComponents[i]==varName) {
+                                    index = i;
+                                }
+                            }
+                            if (index==-1) throw "Error: Did not find key.";
+                            if (varValue==baseMDP.states[edge.second].label[index]) {
+                                //std::cerr << "Found a complex edge match\n";
+                                edgeParityTargetState = a.second;
+                                //std::cout << "Dest: " << a.second << std::endl;
+                            }
+                        }
+                    }
+                }
+
+                std::pair<unsigned int /*mdpState*/, unsigned int /*parityState*/> target(edge.second,edgeParityTargetState);
                 if (stateMapper.count(target)==0) {
                     stateMapper[target] = states.size();
-                    todo.push_back(TODOTuple(states.size(),edge.second,parityTargetState));
-                    std::ostringstream stateName;
-                    stateName << baseMDP.states[edge.second].label;
-                    stateName << "," << parityTargetState;
-                    states.push_back(MDPState(stateName.str()));
-                    // std::cout << "XS: " << stateName.str() << std::endl;
-                    colors.push_back(parityColors.at(parityTargetState));
-                    nofColors = std::max(nofColors,parityColors[parityTargetState]);
+                    todo.push_back(TODOTuple(states.size(),edge.second,edgeParityTargetState));
+                    std::vector<std::string> stateLabel = baseMDP.states[edge.second].label;
+                    // std::cerr << "Prod: " << baseMDP.states[edge.second].label.size() << std::endl;
+                    std::ostringstream parityTargetString; parityTargetString << edgeParityTargetState;
+                    stateLabel.push_back(parityTargetString.str());
+                    states.push_back(MDPState(stateLabel));
+                    // std::cerr << "XS: " << stateLabel.size() << std::endl;
+                    colors.push_back(parityColors.at(edgeParityTargetState));
+                    nofColors = std::max(nofColors,parityColors[edgeParityTargetState]);
                 }
 
                 targetTransition.edges.push_back(std::pair<double,unsigned int>(edge.first,stateMapper.at(target)));
@@ -329,7 +380,17 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
 void ParityMDP::dumpDot(std::ostream &output) const {
     output << "digraph dotFile {\n";
     for (unsigned int i=0;i<states.size();i++) {
-        output << "  s" << i << "[label=\"" << states.at(i).label << "\",shape=rectangle];\n";
+        output << "  s" << i << "[label=\"(";
+        bool first = true;
+        for (auto a : states.at(i).label) {
+            if (first) {
+                first = false;
+            } else {
+                output << ",";
+            }
+            output << a;
+        }
+        output << ")\",shape=rectangle];\n";
     }
     unsigned int edgeID = 0;
     for (unsigned int i=0;i<transitions.size();i++) {
