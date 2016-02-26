@@ -28,9 +28,9 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
 
     // Perform iteration
     double diff = 1;
-    //std::cerr << "vi";
-    while (diff > std::numeric_limits<double>::min()*128) {
-        // std::cerr << ",";
+    std::cerr << "vi(";
+    while (diff > 0.00001) {
+        std::cerr << "," << diff;
         diff = 0.0;
         for (unsigned int i=0;i<states.size();i++) {
             unsigned int dir = 0;
@@ -78,6 +78,7 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
         }
         assert(result[i].second < transitions[i].size());
     }
+    std::cerr << ")";
 
     return result;
 
@@ -228,19 +229,18 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                 strategyMemoryUsedSoFar++;
                 while (todoNonBackup.size()>0) {
 
-                    std::cerr << "Non-Backup!\n";
-
+                    // std::cerr << "Non-Backup!\n";
                     unsigned int thisOne = todoNonBackup.front();
                     todoNonBackup.pop_front();
 
                     unsigned int srcData = currentGoalStates.count(thisOne)>0?0:strategyMemoryUsedSoFar;
                     unsigned int chosenTransition = values[thisOne].second;
-                    std::cerr << "ChosenTransition: " << chosenTransition << std::endl;
+                    // std::cerr << "ChosenTransition: " << chosenTransition << std::endl;
                     std::map<unsigned int, unsigned int> newData;
                     if (values[thisOne].first!=0.0) { // Exact comparison with 0.0 is OK here.
                         for (auto &e : mdpForAnalysis.transitions[thisOne].at(chosenTransition).edges) {
                             unsigned int dest = e.second;
-                            std::cerr << "ISGOALSTATE: " << currentGoalStates.count(dest) << std::endl;
+                            // std::cerr << "ISGOALSTATE: " << currentGoalStates.count(dest) << std::endl;
                             if (currentGoalStates.count(dest)>0) {
                                 newData[dest] = 0;
                             } else if (dest >= states.size()) {
@@ -252,14 +252,13 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                                 }
                             } else {
                                 newData[dest] = strategyMemoryUsedSoFar;
-                                std::cerr << "Yay!\n";
                                 if (doneNonBackup.count(dest)==0) {
                                     todoNonBackup.push_back(dest);
                                     doneNonBackup.insert(dest);
                                 }
                             }
                         }
-                        std::cerr << "Setting Strategy transitions for " << thisOne << " " << srcData << " non-backup.\n";
+                        // std::cerr << "Setting Strategy transitions for " << thisOne << " " << srcData << " non-backup.\n";
                         strategy[StrategyTransitionPredecessor(thisOne,srcData)] = StrategyTransitionChoice(chosenTransition,newData);
                     }
                 }
@@ -334,12 +333,12 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
     return strategy;
 }
 
-void ParityMDP::printPolicy(const std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> &policy) {
+void ParityMDP::printPolicy(const std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> &policy) const {
     std::cout << policy.size() << "\n";
     for (auto &entry : policy) {
-        std::cout << entry.first.mdpState << " " << entry.first.dataState << " " << entry.second.action << "\n";
+        std::cout << entry.first.mdpState << " " << entry.first.dataState << " " << toNonParityMDPMapper.at(entry.first.mdpState) << " " << entry.second.action << "\n";
         for (auto &entry2 : entry.second.memoryUpdate) {
-            std::cout << "-> " << entry2.first << " " << entry2.second << "\n";
+            std::cout << "-> " << toNonParityMDPMapper.at(entry2.first) << " " << entry2.first << " " << entry2.second << "\n";
         }
     }
 }

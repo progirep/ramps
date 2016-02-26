@@ -9,12 +9,12 @@ nofDirections=8
 probabilityDirectionChangeFail=0.1
 
 # How fast is the unicycle?
-unicycleSpeed=0.0
+unicycleSpeed=1.0
 
 # When updating the position, now much noise to add?
 positionUpdateNoise = 0.1
 
 # InitialPosition
-initX = 48
-initY = 25
+initX = 5
+initY = 5
 initDir = 0

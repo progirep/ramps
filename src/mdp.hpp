@@ -62,6 +62,7 @@ private:
     std::vector<MDPState> states;
     std::vector<std::vector<MDPTransition> > transitions;
     std::vector<unsigned int> colors;
+    std::map<unsigned int,unsigned int> toNonParityMDPMapper;
     unsigned int initialState; // is always 0
     unsigned int nofColors;
 
@@ -71,8 +72,7 @@ public:
     ParityMDP(std::string parityFilename, const MDP &baseMDP);
     void dumpDot(std::ostream &output) const;
     std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> computeRAPolicy(double raLevel) const;
-
-    static void printPolicy(const std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> &policy);
+    void printPolicy(const std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> &policy) const;
 };
 
 

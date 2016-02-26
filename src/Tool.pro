@@ -12,7 +12,7 @@ QMAKE_CFLAGS_DEBUG += -g -Wall -Wextra
 QMAKE_CXXFLAGS_DEBUG += -g -std=c++11 -Wall -Wextra
 
 TEMPLATE = app console
-CONFIG += debug
+CONFIG += release
 CONFIG -= app_bundle
 CONFIG -= qt
 

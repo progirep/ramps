@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <map>
+#include <set>
 #include <list>
 
 /**
@@ -169,6 +170,7 @@ MDP::MDP(std::string baseFilename) {
 
                 // New transition needed?
                 if ((lastTransitionStartingState!=stateNr) || (transitionNumber != lastTransitionNumber)) {
+
                     // Allocate new transition
                     if (transitionNumber!=transitions[stateNr].size()) throw "Error in transition number.";
                     transitions[stateNr].push_back(MDPTransition());
@@ -212,6 +214,34 @@ MDP::MDP(std::string baseFilename) {
             }
         }
     }
+
+    // Check the strongly connectedness of the MDP
+    std::list<unsigned int> todo;
+    std::set<unsigned int> done;
+    todo.push_back(initialState);
+    done.insert(initialState);
+    while (todo.size()>0) {
+        unsigned int thisOne = todo.front();
+        todo.pop_front();
+        for (auto &t : transitions[thisOne]) {
+            for (auto &e : t.edges) {
+                if (done.count(e.second)==0) {
+                    todo.push_back(e.second);
+                    done.insert(e.second);
+                }
+            }
+        }
+    }
+    if (done.size()!=states.size()) {
+        std::cerr << "Warning: Found " << states.size()-done.size() << " unreadable states in the MDP!\n";
+        std::cerr << "Examples state numbers are:";
+        for (unsigned int i=0;i<states.size();i++) {
+            if (done.count(i)==0) std::cerr << i << " ";
+        }
+        std::cerr << std::endl;
+    }
+
+
 }
 
 
@@ -303,20 +333,26 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
 
         TODOTuple thisItem = todo.front();
         todo.pop_front();
-        // std::cerr << thisItem.mdpState << "," << thisItem.parityState << "," << thisItem.productState << std::endl;
+        //std::cerr << "todo"<< thisItem.mdpState << "," << thisItem.parityState << "," << thisItem.productState << std::endl;
         while (transitions.size()<=thisItem.productState) transitions.push_back(std::vector<MDPTransition>());
+        toNonParityMDPMapper[thisItem.productState] = thisItem.mdpState;
 
         // Iterate through the transitions
         for (auto &tran : baseMDP.transitions[thisItem.mdpState]) {
             MDPTransition targetTransition;
             targetTransition.action = tran.action;
 
-            std::pair<unsigned int /*parityState*/, std::string /*action*/> parityEdge(thisItem.parityState,actions[tran.action]);
+            // Where does the parity
             unsigned int parityTargetState;
-            if (parityTransitions.count(parityEdge)==0) {
-                parityTargetState = thisItem.parityState;
+            if (tran.action!=-1) {
+                std::pair<unsigned int /*parityState*/, std::string /*action*/> parityEdge(thisItem.parityState,actions[tran.action]);
+                if (parityTransitions.count(parityEdge)==0) {
+                    parityTargetState = thisItem.parityState;
+                } else {
+                    parityTargetState = parityTransitions[parityEdge];
+                }
             } else {
-                parityTargetState = parityTransitions[parityEdge];
+                parityTargetState = thisItem.parityState;
             }
 
             // Iterate over the transitions
@@ -360,7 +396,6 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
                     std::ostringstream parityTargetString; parityTargetString << edgeParityTargetState;
                     stateLabel.push_back(parityTargetString.str());
                     states.push_back(MDPState(stateLabel));
-                    // std::cerr << "XS: " << stateLabel.size() << std::endl;
                     colors.push_back(parityColors.at(edgeParityTargetState));
                     nofColors = std::max(nofColors,parityColors[edgeParityTargetState]);
                 }
@@ -396,7 +431,9 @@ void ParityMDP::dumpDot(std::ostream &output) const {
     for (unsigned int i=0;i<transitions.size();i++) {
         for (unsigned int j=0;j<transitions[i].size();j++) {
             output << "  e" << edgeID << "[label=\"\",size=0.05,fixedsize=true,shape=point];\n";
-            output << "  s" << i << " -> e" << edgeID << "[label=\"" << actions[transitions[i][j].action] << "\",dir=none];\n";
+            output << "  s" << i << " -> e" << edgeID << "[label=\"";
+            if (transitions[i][j].action!=-1) output << actions[transitions[i][j].action];
+            output << "\",dir=none];\n";
             for (auto &edge : transitions[i][j].edges) {
                 output << "  e" << edgeID << " -> s" << edge.second << "[label=\"" << edge.first << "\"];\n";
             }
