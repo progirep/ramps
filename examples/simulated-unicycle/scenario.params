@@ -1,0 +1,20 @@
+# This is a parameters file.
+# Empty lines or lines starting with '#' are ignored.
+# All data lines are of the form 'key=value'
+
+# How many directions does the unicycle have? In each step, it can only change its direction by one step.
+nofDirections=8
+
+# What is the probability of a direction change failing?
+probabilityDirectionChangeFail=0.1
+
+# How fast is the unicycle?
+unicycleSpeed=1.5
+
+# When updating the position, now much noise to add?
+positionUpdateNoise = 0.1
+
+# InitialPosition
+initX = 48
+initY = 25
+initDir = 0
