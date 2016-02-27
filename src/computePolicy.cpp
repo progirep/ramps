@@ -29,7 +29,7 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
     // Perform iteration
     double diff = 1;
     std::cerr << "vi(";
-    while (diff > 0.00001) {
+    while (diff > 0.000000000001) {
         std::cerr << "," << diff;
         diff = 0.0;
         for (unsigned int i=0;i<states.size();i++) {
@@ -78,15 +78,19 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
         }
         assert(result[i].second < transitions[i].size());
     }
-    std::cerr << ")";
+    std::cerr << ")\n";
 
     return result;
 
 }
 
 
-
-std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::computeRAPolicy(double raLevel) const {
+/**
+ * @brief Computes an RA policy.
+ * @param raLevel The minimum requested RA level.
+ * @return a pair consisting of the RA quality of the strategy and the strategy itself.
+ */
+std::pair<std::map<StrategyTransitionPredecessor,StrategyTransitionChoice>,double> ParityMDP::computeRAPolicy(double raLevel) const {
 
     // The final strategy
     std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> strategy;
@@ -96,6 +100,7 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
     unsigned int nofTargetColorSwitchbacks = 0;
     StateSetType winningOuterGoalStates;
     unsigned int oldNofWinningOuterGoalStates;
+    double qualityOfGeneratedImplementation = 1.0;
     do {
         std::cerr << "Outer iteration!\n";
         oldNofWinningOuterGoalStates = winningOuterGoalStates.size();
@@ -185,7 +190,7 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                 assert(values.size()==states.size()*2);
 
                 // Debugging: Print
-                std::cerr << "Results of value iteration for minGoalColor:" << minGoalColor << std::endl;
+                /* std::cerr << "Results of value iteration for minGoalColor:" << minGoalColor << std::endl;
                 for (unsigned int i=0;i<states.size();i++) {
                     std::cerr << "- (";
                     bool first = true;
@@ -198,7 +203,7 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                         std::cerr << a;
                     }
                     std::cerr << "): \t" << values[i].first << " by trans " << values[i].second << "\n";
-                }
+                }*/
 
                 // Update set of goal state that are reachable under the raLevel
                 for (auto it = currentGoalStates.begin(); it != currentGoalStates.end();){
@@ -220,6 +225,7 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
                     if (strategy.count(key)==0) {
                         todoNonBackup.push_back(*it);
                         doneNonBackup.insert(*it);
+                        qualityOfGeneratedImplementation = std::min(qualityOfGeneratedImplementation,values[*it].first);
                     }
                 }
 
@@ -312,12 +318,13 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
         fixedValues[a] = 1.0;
     }
     std::vector<std::pair<double,unsigned int> > values = mdpForAnalysis.valueIteration(fixedValues);
+    qualityOfGeneratedImplementation = std::min(qualityOfGeneratedImplementation,values[initialState].first);
     for (unsigned int i=0;i<states.size();i++) {
         /* if (values[i].first>=raLevel) */ {
             auto key = StrategyTransitionPredecessor(i,0);
             if (strategy.count(key)==0) {
                 if (values[i].first!=0.0) { // Exact comparison with 0.0 is OK here.
-                    std::cerr << "Processing " << i << std::endl;
+                    // std::cerr << "Processing " << i << std::endl;
                     std::map<unsigned int, unsigned int> newData;
                     unsigned int chosenTransition = values[i].second;
                     for (auto &e : mdpForAnalysis.transitions[i][chosenTransition].edges) {
@@ -330,7 +337,7 @@ std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> ParityMDP::comp
         }
     }
 
-    return strategy;
+    return std::pair<std::map<StrategyTransitionPredecessor,StrategyTransitionChoice>,double>(strategy,qualityOfGeneratedImplementation);
 }
 
 void ParityMDP::printPolicy(const std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> &policy) const {

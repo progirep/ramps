@@ -146,7 +146,7 @@ def computeSuccs(xpos,ypos,direction):
             if yEnd>maxY:
                     yEnd = maxY
             thisVolume = (xEnd-xStart)*(yEnd-yStart)
-            if (x>=0) and (y>=0) and (x<xsize) and (y<ysize):
+            if (x>=0) and (y>=0) and (x<xsize) and (y<ysize) and imageData[x+y*xsize]!=1: # includes static obstacle (color 1)
                     targetCells[(x,y)] = thisVolume/sizeOfImage
             else:
                     targetCells[(-1,-1)] += thisVolume/sizeOfImage
@@ -214,7 +214,6 @@ while True:
            assert len(line)==3
            policy[currentPolicyState][2][int(line[0])] = (int(line[1]),int(line[2]))
         else:
-            print >>sys.stderr, "L:",line
             line = line.strip().split(" ")
             assert len(line)==4
             currentPolicyState = (int(line[0]),int(line[1]))
@@ -266,6 +265,7 @@ def actionLoop():
     policyData = None
     
     isPaused = False
+    speed = 10
     while 1:
     
         resetInThisRound = False
@@ -278,6 +278,10 @@ def actionLoop():
                 isPaused = not isPaused
             if (event.type == pygame.locals.KEYDOWN and event.key == pygame.locals.K_r):
                 resetInThisRound = True
+            if (event.type == pygame.locals.KEYDOWN and event.key == pygame.locals.K_PLUS):
+                speed += 1
+            if (event.type == pygame.locals.KEYDOWN and event.key == pygame.locals.K_MINUS):
+                speed = max(speed-1,1)
 
         # Update 
         if resetInThisRound or (policyState==None):
@@ -285,7 +289,10 @@ def actionLoop():
                 policyData = 0
 
         # Obtain robot information for drawing
-        (robotX,robotY,direction) = reverseStateMapper[policy[(policyState,policyData)][0]]
+        if (policyState,policyData) in policy:
+            (robotX,robotY,direction) = reverseStateMapper[policy[(policyState,policyData)][0]]
+        else:
+            (robotX,robotY,direction) = (-1,-1,-1) # Crashed
             
         # Draw Field
         for x in xrange(0,xsize):
@@ -299,14 +306,18 @@ def actionLoop():
             boundaryColor = (255,0,0)
         else:
             boundaryColor = (64,64,64)
-            pygame.draw.rect(screenBuffer,boundaryColor,(0,0,MAGNIFY*(xsize+2),MAGNIFY),0)
-            # pygame.draw.rect(screenBuffer,boundaryColor,(0,0,MAGNIFY*(xsize+2),MAGNIFY),0)
+        pygame.draw.rect(screenBuffer,boundaryColor,(0,0,MAGNIFY*(xsize+2),MAGNIFY),0)
+        pygame.draw.rect(screenBuffer,boundaryColor,(0,MAGNIFY,MAGNIFY,MAGNIFY*(ysize+1)),0)
+        pygame.draw.rect(screenBuffer,boundaryColor,(MAGNIFY*(xsize+1),MAGNIFY,MAGNIFY,MAGNIFY*(ysize+1)),0)
+        pygame.draw.rect(screenBuffer,boundaryColor,(MAGNIFY,MAGNIFY*(ysize+1),MAGNIFY*xsize,MAGNIFY),0)
+        # pygame.draw.rect(screenBuffer,boundaryColor,(0,0,MAGNIFY*(xsize+2),MAGNIFY),0)
 
 
         # Draw "Good" Robot
-        pygame.draw.circle(screenBuffer, (192,32,32), ((robotX+1)*MAGNIFY+MAGNIFY/2,(robotY+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-2, 0)
-        pygame.draw.circle(screenBuffer, (255,255,255), ((robotX+1)*MAGNIFY+MAGNIFY/2,(robotY+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-1, 1)
-        pygame.draw.circle(screenBuffer, (0,0,0), ((robotX+1)*MAGNIFY+MAGNIFY/2,(robotY+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3, 1)
+        if robotX!=-1:
+            pygame.draw.circle(screenBuffer, (192,32,32), ((robotX+1)*MAGNIFY+MAGNIFY/2,(robotY+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-2, 0)
+            pygame.draw.circle(screenBuffer, (255,255,255), ((robotX+1)*MAGNIFY+MAGNIFY/2,(robotY+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-1, 1)
+            pygame.draw.circle(screenBuffer, (0,0,0), ((robotX+1)*MAGNIFY+MAGNIFY/2,(robotY+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3, 1)
 
         # Draw cell frames
         for x in xrange(0,xsize):
@@ -319,32 +330,33 @@ def actionLoop():
         pygame.display.flip()
 
         # Update state
-        randomNumber = random.random()
-        (mdpstate,decision,dataUpdate) = policy[(policyState,policyData)]
-        transitionList = transitionLists[(mdpstate,decision)]
-        dest = None
-        for (a,b) in transitionList:
-            print "TL",(a,b)
-            if randomNumber<=b:
-                dest = a
-                randomNumber = 123.0
-            else:
-                randomNumber -= b
-        # Rounding error?
-        if (dest==None):
-            dest = transitionList[0][0]
-        # Update memory
-        print policyState
-        print decision
-        print dest
-        print policy[(policyState,policyData)]
-        assert dest in policy[(policyState,policyData)][2]
-        (policyState,policyData) = dataUpdate[dest]
+        if (not isPaused) and robotX!=-1:
+            randomNumber = random.random()
+            (mdpstate,decision,dataUpdate) = policy[(policyState,policyData)]
+            transitionList = transitionLists[(mdpstate,decision)]
+            dest = None
+            for (a,b) in transitionList:
+                print "TL",(a,b)
+                if randomNumber<=b:
+                    dest = a
+                    randomNumber = 123.0
+                else:
+                    randomNumber -= b
+            # Rounding error?
+            if (dest==None):
+                dest = transitionList[0][0]
+            # Update memory
+            print policyState
+            print decision
+            print dest
+            print policy[(policyState,policyData)]
+            assert dest in policy[(policyState,policyData)][2]
+            (policyState,policyData) = dataUpdate[dest]
                             
         # Make the transition
         if not isPaused:
             # Done
-            clock.tick(10)
+            clock.tick(speed)
         else:
             clock.tick(3)
 

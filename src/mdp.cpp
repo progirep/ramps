@@ -235,8 +235,14 @@ MDP::MDP(std::string baseFilename) {
     if (done.size()!=states.size()) {
         std::cerr << "Warning: Found " << states.size()-done.size() << " unreadable states in the MDP!\n";
         std::cerr << "Examples state numbers are:";
+        unsigned int statesPrinted = 0;
         for (unsigned int i=0;i<states.size();i++) {
-            if (done.count(i)==0) std::cerr << i << " ";
+            if (done.count(i)==0) {
+                if (statesPrinted<100) {
+                    std::cerr << " " << i;
+                    statesPrinted++;
+                }
+            }
         }
         std::cerr << std::endl;
     }

@@ -31,8 +31,20 @@ int main(int nofArgs, const char **args) {
         const MDP mdp(baseFilename);
         const ParityMDP parityMDP(baseFilename+".parity",mdp);
         //parityMDP.dumpDot(std::cout);
-        auto strategy = parityMDP.computeRAPolicy(0.5);
-        parityMDP.printPolicy(strategy);
+        double quality = 0.001;
+        std::pair<std::map<StrategyTransitionPredecessor,StrategyTransitionChoice>,double> bestStrategy;
+        while(true) {
+            auto thisStrategy = parityMDP.computeRAPolicy(quality);
+            std::cerr << "Quality computed: " << thisStrategy.second << std::endl;
+            if (thisStrategy.first.size()>0) {
+                bestStrategy = thisStrategy;
+                quality = bestStrategy.second + 0.0001;
+            } else {
+                break;
+            }
+        }
+        parityMDP.printPolicy(bestStrategy.first);
+        std::cerr << "Quality of the generated strategy: " << bestStrategy.second << std::endl;
 
     } catch (int error) {
         std::cerr << "Numerical error " << error << std::endl;

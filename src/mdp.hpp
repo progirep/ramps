@@ -71,7 +71,7 @@ private:
 public:
     ParityMDP(std::string parityFilename, const MDP &baseMDP);
     void dumpDot(std::ostream &output) const;
-    std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> computeRAPolicy(double raLevel) const;
+    std::pair<std::map<StrategyTransitionPredecessor,StrategyTransitionChoice>,double> computeRAPolicy(double raLevel) const;
     void printPolicy(const std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> &policy) const;
 };
 
