@@ -6,6 +6,8 @@
 #include <limits>
 #include <iostream>
 #include <list>
+#include "clapack.h"
+
 
 // TypeDefs
 typedef std::set<unsigned int> StateSetType;
@@ -29,9 +31,10 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
     // Perform iteration
     double diff = 1;
     std::cerr << "vi(";
-    while (diff > 0.000000000001) {
+    while (diff > 0.00001) {
         std::cerr << "," << diff;
         diff = 0.0;
+        #pragma omp parallel for reduction (+:diff)
         for (unsigned int i=0;i<states.size();i++) {
             unsigned int dir = 0;
             if (touchable[i]) {
