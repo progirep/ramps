@@ -31,10 +31,10 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
 
     // Perform iteration - this time don't write the best direction
     double diff = 1;
-    std::cerr << "vi(";
+    //std::cerr << "vi(";
     while (diff > 0.0001) {
 
-        std::cerr << "," << diff;
+        //std::cerr << "," << diff;
         diff = 0.0;
         //std::swap(newValues,oldValues);
 
@@ -108,7 +108,7 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
         }
         assert(result[i].second < transitions[i].size());
     }
-    std::cerr << ")\n";
+    //std::cerr << ")\n";
 
     return result;
 
