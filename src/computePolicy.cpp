@@ -17,45 +17,73 @@ typedef std::set<unsigned int> StateSetType;
 std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<unsigned int, double> &fixedValues) const {
 
     // Initialize result
-    std::vector<std::pair<double,unsigned int> > result(states.size());
     std::vector<bool> touchable(states.size());
+    //double *oldValues = new double[states.size()];
+    double *newValues = new double[states.size()];
+
     for (unsigned int i=0;i<states.size();i++) {
-        result[i] = std::pair<double,unsigned int>(0.0,0);
+        newValues[i] = 0.0;
         touchable[i] = true;
     }
     for (auto &a : fixedValues) {
-        result[a.first].first = a.second;
+        newValues[a.first] = a.second;
         touchable[a.first] = false;
     }
 
-    // Perform iteration
+    // Perform iteration - this time don't write the best direction
     double diff = 1;
     std::cerr << "vi(";
-    while (diff > 0.00001) {
+    while (diff > 0.01) {
+
         std::cerr << "," << diff;
         diff = 0.0;
+        //std::swap(newValues,oldValues);
+
         #pragma omp parallel for reduction (+:diff)
         for (unsigned int i=0;i<states.size();i++) {
-            unsigned int dir = 0;
             if (touchable[i]) {
                 double bestValue = 0.0;
                 for (unsigned int j=0;j<transitions[i].size();j++) {
-                    auto &a = transitions[i][j];
+                    auto const &a = transitions[i][j];
                     double newValue = 0.0;
-                    for (auto &e : a.edges) {
-                        newValue += e.first*result[e.second].first;
+                    for (const auto &e : a.edges) {
+                        newValue += e.first*newValues[e.second];
                     }
                     if (newValue > bestValue) {
                         bestValue = newValue;
-                        dir = j;
                     }
                 }
-                diff += std::abs(bestValue - result[i].first);
-                result[i] = std::pair<double,unsigned int>(bestValue,dir);
+                diff += std::abs(bestValue - newValues[i]);
+                newValues[i] = bestValue;
             }
-            assert(result[i].second < transitions[i].size());
+            // assert(result[i].second < transitions[i].size());
         }
     }
+
+    // Now build the value+action result
+    std::vector<std::pair<double,unsigned int> > result(states.size());
+    #pragma omp parallel for
+    for (unsigned int i=0;i<states.size();i++) {
+        if (touchable[i]) {
+            double bestValue = 0.0;
+            unsigned int dir = 0;
+            for (unsigned int j=0;j<transitions[i].size();j++) {
+                auto const &a = transitions[i][j];
+                double newValue = 0.0;
+                for (auto &e : a.edges) {
+                    newValue += e.first*newValues[e.second];
+                }
+                if (newValue > bestValue) {
+                    bestValue = newValue;
+                    dir = j;
+                }
+            }
+            result[i] = std::pair<double,unsigned int>(bestValue,dir);
+        }
+        // assert(result[i].second < transitions[i].size());
+    }
+
+    delete[] newValues;
 
     // Now recompute all fixed-probability values
     for (unsigned int i=0;i<states.size();i++) {
