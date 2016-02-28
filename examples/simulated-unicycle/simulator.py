@@ -67,6 +67,7 @@ initY = int(allParams["initY"])
 initDir = int(allParams["initDir"])
 positionUpdateNoise = float(allParams["positionUpdateNoise"])
 unicycleSpeed = float(allParams["unicycleSpeed"])
+probabilityDirectionChangeFail = float(allParams["probabilityDirectionChangeFail"])
 
 # ==================================
 # Construct MDP --> States
@@ -160,6 +161,9 @@ transitionLines = []
 for x in xrange(0,xsize):
     for y in xrange(0,ysize):
         for d in xrange(0,nofDirections):
+
+            # Choice 1: No change
+            edgesNoChange = computeSuccs(x,y,d)
                 
             # Choice 0: Rotate -1
             rotMinus1 = d-1
@@ -169,16 +173,23 @@ for x in xrange(0,xsize):
             for ((a,b),c) in edges.iteritems():
                     dPrime = rotMinus1
                     if (a==-1):
-                            dPrime = -1
-                    transitionLines.append([stateMapper[(x,y,d)],0,stateMapper[(a,b,dPrime)],c])
-            
-            # Choice 1: No change
-            edges = computeSuccs(x,y,d)
-            for ((a,b),c) in edges.iteritems():
+                        dPrime = -1
+                    if c>0.0:
+                        transitionLines.append([stateMapper[(x,y,d)],0,stateMapper[(a,b,dPrime)],c*(1.0-probabilityDirectionChangeFail)])
+            for ((a,b),c) in edgesNoChange.iteritems():
                     dPrime = d
                     if (a==-1):
-                            dPrime = -1
-                    transitionLines.append([stateMapper[(x,y,d)],1,stateMapper[(a,b,dPrime)],c])
+                        dPrime = -1
+                    if c>0.0 and probabilityDirectionChangeFail>0.0:
+                        transitionLines.append([stateMapper[(x,y,d)],0,stateMapper[(a,b,dPrime)],c*probabilityDirectionChangeFail])
+            
+            # Choice 1: No change
+            for ((a,b),c) in edgesNoChange.iteritems():
+                    dPrime = d
+                    if (a==-1):
+                        dPrime = -1
+                    if c>0:        
+                        transitionLines.append([stateMapper[(x,y,d)],1,stateMapper[(a,b,dPrime)],c])
 
             # Choice 0: Rotate 1
             rotPlus1 = d+1
@@ -188,8 +199,17 @@ for x in xrange(0,xsize):
             for ((a,b),c) in edges.iteritems():
                     dPrime = rotPlus1
                     if (a==-1):
-                            dPrime = -1
-                    transitionLines.append([stateMapper[(x,y,d)],2,stateMapper[(a,b,dPrime)],c])
+                        dPrime = -1
+                    if c>0:
+                        transitionLines.append([stateMapper[(x,y,d)],2,stateMapper[(a,b,dPrime)],c*(1-probabilityDirectionChangeFail)])
+            for ((a,b),c) in edgesNoChange.iteritems():
+                    dPrime = d
+                    if (a==-1):
+                        dPrime = -1
+                    if c>0 and probabilityDirectionChangeFail>0.0:
+                        transitionLines.append([stateMapper[(x,y,d)],2,stateMapper[(a,b,dPrime)],c*probabilityDirectionChangeFail])
+
+
                                 
 # Print transitions file: It contains the transitions computed earlier PLUS an error state self loop
 with open(pngFileBasis+".tra","w") as transitionFile:
@@ -202,28 +222,32 @@ with open(pngFileBasis+".tra","w") as transitionFile:
 # ==================================
 # Compute and read strategy/policy
 # ==================================
-rampsProcess = subprocess.Popen(["../../src/ramps",pngFileBasis], bufsize=1048768, stdin=None, stdout=subprocess.PIPE)
+if not os.path.exists(pngFileBasis+".strategy") or (os.path.getmtime(pngFileBasis+".params")>os.path.getmtime(pngFileBasis+".strategy")):
+    with open(pngFileBasis+".strategy","wb") as out:
+        rampsProcess = subprocess.Popen(["../../src/ramps",pngFileBasis], bufsize=1048768, stdin=None, stdout=out)
+        returncode = rampsProcess.wait()
+        if (returncode!=0):
+            print >>sys.stderr, "RAMPS returned error code:",returncode
+            sys.exit(1)
+        
 policy = {}
 currentPolicyState = None
-nofPolicyStates = int(rampsProcess.stdout.readline().strip())
-while True:
-    line = rampsProcess.stdout.readline()
-    if line != '':
-        if line.startswith("->"):
-           line = line[2:].strip().split(" ")
-           assert len(line)==3
-           policy[currentPolicyState][2][int(line[0])] = (int(line[1]),int(line[2]))
+with open(pngFileBasis+".strategy","r") as strat:
+    nofPolicyStates = int(strat.readline().strip())
+    while True:
+        line = strat.readline()
+        if line != '':
+            if line.startswith("->"):
+               line = line[2:].strip().split(" ")
+               assert len(line)==3
+               policy[currentPolicyState][2][int(line[0])] = (int(line[1]),int(line[2]))
+            else:
+                line = line.strip().split(" ")
+                assert len(line)==4
+                currentPolicyState = (int(line[0]),int(line[1]))
+                policy[currentPolicyState] = [int(line[2]),int(line[3]),{}]
         else:
-            line = line.strip().split(" ")
-            assert len(line)==4
-            currentPolicyState = (int(line[0]),int(line[1]))
-            policy[currentPolicyState] = [int(line[2]),int(line[3]),{}]
-    else:
-        break
-returncode = rampsProcess.wait()
-if (returncode!=0):
-    print >>sys.stderr, "RAMPS returned error code:",returncode
-    sys.exit(1)
+            break
 
 # ==================================
 # Prepare reverse state mapper and
@@ -336,7 +360,6 @@ def actionLoop():
             transitionList = transitionLists[(mdpstate,decision)]
             dest = None
             for (a,b) in transitionList:
-                print "TL",(a,b)
                 if randomNumber<=b:
                     dest = a
                     randomNumber = 123.0
@@ -346,10 +369,10 @@ def actionLoop():
             if (dest==None):
                 dest = transitionList[0][0]
             # Update memory
-            print policyState
-            print decision
-            print dest
-            print policy[(policyState,policyData)]
+            # print policyState
+            # print decision
+            # print dest
+            # print policy[(policyState,policyData)]
             assert dest in policy[(policyState,policyData)][2]
             (policyState,policyData) = dataUpdate[dest]
                             

@@ -264,6 +264,11 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
 
     // Read parity automaton
     std::ifstream inFile(parityFilename);
+    if (inFile.fail()) {
+        std::ostringstream error;
+        error << "Cannot open parity automaton file '" << parityFilename << "'.";
+        throw error.str();
+    }
     // for (auto it : baseMDP.actions) {
     //     std::cout << it << "\n";
     // }

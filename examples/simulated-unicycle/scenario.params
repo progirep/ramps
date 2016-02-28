@@ -12,7 +12,7 @@ probabilityDirectionChangeFail=0.1
 unicycleSpeed=2.0
 
 # When updating the position, now much noise to add?
-positionUpdateNoise = 0.1
+positionUpdateNoise = 0.4
 
 # InitialPosition
 initX = 30
