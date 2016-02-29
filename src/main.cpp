@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 #include <tuple>
+#include <sstream>
 #include "mdp.hpp"
 
 
@@ -12,6 +13,9 @@ int main(int nofArgs, const char **args) {
         // Parse parameters
         std::string baseFilename = "";
         std::string searchStrategy = "";
+        double minQuality = 0.0;
+        double maxQuality = 1.0;
+
         for (int i=1;i<nofArgs;i++) {
             if (args[i][0]=='-') {
                 // Special parameter
@@ -27,7 +31,31 @@ int main(int nofArgs, const char **args) {
                     }
                     searchStrategy = args[++i];
 
-                } else {
+                } else if (param=="--min") {
+                    if (nofArgs<i+1) {
+                        std::cerr << "Error: No parameter after '--min'.\n";
+                        return 1;
+                    }
+                    std::istringstream is(args[++i]);
+                    is >> minQuality;
+                    if (is.fail()) {
+                        std::cerr << "Error: Illegal floating point number after '--min'.\n";
+                        return 1;
+                    }
+                } else if (param=="--max") {
+                    if (nofArgs<i+1) {
+                        std::cerr << "Error: No parameter after '--max'.\n";
+                        return 1;
+                    }
+                    std::istringstream is(args[++i]);
+                    is >> maxQuality;
+                    if (is.fail()) {
+                        std::cerr << "Error: Illegal floating point number after '--max'.\n";
+                        return 1;
+                    }
+                }
+
+                else {
                     std::cerr << "Error: Did not understand parameter " << args[i] << std::endl;
                     return 1;
                 }
@@ -102,10 +130,8 @@ int main(int nofArgs, const char **args) {
         const MDP mdp(baseFilename);
         const ParityMDP parityMDP(baseFilename+".parity",mdp);
         //parityMDP.dumpDot(std::cout);
-        std::pair<std::map<StrategyTransitionPredecessor,StrategyTransitionChoice>,double> bestStrategy;
+        std::pair<std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionChoice,StrategyTransitionPredecessorHash>,double> bestStrategy;
         bestStrategy.second = 0.0;
-        double minQuality = 0.0;
-        double maxQuality = 1.0;
 
         for (const std::tuple<char,double,double> &currentSearchStrategyTuple : searchStrategyParts) {
 
@@ -134,7 +160,7 @@ int main(int nofArgs, const char **args) {
                 while ((maxQuality-minQuality) > std::get<1>(currentSearchStrategyTuple)) {
                     double mid = (maxQuality+minQuality)/2;
                     auto thisStrategy = parityMDP.computeRAPolicy(mid,epsilon);
-                    std::cerr << "Quality computed: " << thisStrategy.second << std::endl;
+                    std::cerr << "Quality computed: " << thisStrategy.second << ", asking for " << mid << std::endl;
                     if (thisStrategy.second>=mid) {
                         // foundStrategy
                         minQuality = thisStrategy.second;

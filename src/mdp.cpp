@@ -21,6 +21,7 @@ MDP::MDP(std::string baseFilename) {
         }
         std::string labelLine;
         std::getline(stateFile,labelLine);
+        if (stateFile.fail()) throw "Error: Empty label file.";
         {
             // Parse label line
             if (labelLine.at(0)!='(') throw "Illegal MDP state name pattern: no opening brace";
@@ -33,7 +34,6 @@ MDP::MDP(std::string baseFilename) {
                 a = labelLine.find(",");
             }
             labelComponents.push_back(labelLine);
-
         }
 
         std::string dataLine;
@@ -279,12 +279,12 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
         std::string colorLine;
         std::getline(inFile,colorLine);
         std::istringstream is(colorLine);
-        do {
+        while (!(is >> std::ws).fail()) {
             unsigned int color;
             is >> color;
             parityColors.push_back(color);
             if (is.bad()) throw "Error reading color line in Parity automaton";
-        } while (!is.eof());
+        };
     }
 
     // Parse transitions
@@ -310,6 +310,8 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
             }
             is >> to;
             if (is.bad()) throw "Error: Illegal parity automaton line";
+            is >> std::ws;
+            if (!is.eof()) throw "Error: A parity automaton line is too long";
 
             std::pair<unsigned int, std::string> data(from,label);
             if (parityTransitions.count(data)>0) throw "Error: The parity automaton is non-deterministic.";

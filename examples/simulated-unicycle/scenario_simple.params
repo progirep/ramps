@@ -6,7 +6,7 @@
 nofDirections=8
 
 # What is the probability of a direction change failing?
-probabilityDirectionChangeFail=0.2
+probabilityDirectionChangeFail=0.0
 
 # How fast is the unicycle?
 unicycleSpeed=2.0

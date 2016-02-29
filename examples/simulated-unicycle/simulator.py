@@ -27,6 +27,7 @@ if len(sys.argv)<2:
     print >>sys.stderr, "Error: Need PNG file as parameter"
     sys.exit(1)
 specFile = sys.argv[1]
+rampsParameters = sys.argv[2:]
 
 # ==================================
 # Read input image
@@ -224,7 +225,7 @@ with open(pngFileBasis+".tra","w") as transitionFile:
 # ==================================
 if not os.path.exists(pngFileBasis+".strategy") or (os.path.getmtime(pngFileBasis+".params")>os.path.getmtime(pngFileBasis+".strategy")):
     with open(pngFileBasis+".strategy","wb") as out:
-        rampsProcess = subprocess.Popen(["../../src/ramps",pngFileBasis], bufsize=1048768, stdin=None, stdout=out)
+        rampsProcess = subprocess.Popen(["../../src/ramps",pngFileBasis]+rampsParameters, bufsize=1048768, stdin=None, stdout=out)
         returncode = rampsProcess.wait()
         if (returncode!=0):
             print >>sys.stderr, "RAMPS returned error code:",returncode

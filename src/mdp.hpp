@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 
 struct MDPState {
     std::vector<std::string> label;
@@ -45,6 +46,16 @@ struct StrategyTransitionPredecessor{
         if (v1>0) return false;
         return ((int)dataState)-((int)other.dataState)<0;
     }
+
+    bool operator==(const StrategyTransitionPredecessor &other) const {
+        return (other.mdpState==mdpState) && (other.dataState==dataState);
+    }
+};
+
+struct StrategyTransitionPredecessorHash {
+    inline std::size_t operator()(const StrategyTransitionPredecessor& k) const {
+        return (size_t)(k.mdpState)*1337 ^ (size_t)(k.dataState*23);
+    }
 };
 
 struct StrategyTransitionChoice {
@@ -71,8 +82,8 @@ private:
 public:
     ParityMDP(std::string parityFilename, const MDP &baseMDP);
     void dumpDot(std::ostream &output) const;
-    std::pair<std::map<StrategyTransitionPredecessor,StrategyTransitionChoice>,double> computeRAPolicy(double raLevel, double epsilon) const;
-    void printPolicy(const std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> &policy) const;
+    std::pair<std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionChoice,StrategyTransitionPredecessorHash>,double> computeRAPolicy(double raLevel, double epsilon) const;
+    void printPolicy(const std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionChoice,StrategyTransitionPredecessorHash> &policy) const;
 };
 
 
