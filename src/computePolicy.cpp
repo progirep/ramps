@@ -13,7 +13,7 @@ typedef std::set<unsigned int> StateSetType;
 
 
 // Value Iteration
-std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<unsigned int, double> &fixedValues) const {
+std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<unsigned int, double> &fixedValues, double epsilon) const {
 
     // Initialize result
     std::vector<bool> touchable(states.size());
@@ -30,9 +30,9 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
     }
 
     // Perform iteration - this time don't write the best direction
-    double diff = 1;
+    double diff = 2*epsilon;
     //std::cerr << "vi(";
-    while (diff > 0.0001) {
+    while (diff > epsilon) {
 
         //std::cerr << "," << diff;
         diff = 0.0;
@@ -120,7 +120,7 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
  * @param raLevel The minimum requested RA level.
  * @return a pair consisting of the RA quality of the strategy and the strategy itself.
  */
-std::pair<std::map<StrategyTransitionPredecessor,StrategyTransitionChoice>,double> ParityMDP::computeRAPolicy(double raLevel) const {
+std::pair<std::map<StrategyTransitionPredecessor,StrategyTransitionChoice>,double> ParityMDP::computeRAPolicy(double raLevel, double epsilon) const {
 
     // The final strategy
     std::map<StrategyTransitionPredecessor,StrategyTransitionChoice> strategy;
@@ -216,7 +216,7 @@ std::pair<std::map<StrategyTransitionPredecessor,StrategyTransitionChoice>,doubl
                 }
 
                 // 3. Perform Value iteration
-                values = mdpForAnalysis.valueIteration(fixedValues);
+                values = mdpForAnalysis.valueIteration(fixedValues,epsilon);
                 assert(values.size()==states.size()*2);
 
                 // Debugging: Print
@@ -324,7 +324,7 @@ std::pair<std::map<StrategyTransitionPredecessor,StrategyTransitionChoice>,doubl
                                 throw "Internal error in the MDP-for-Analysis";
                             }
                         }
-                        std::cerr << "Setting Strategy transitions for " << thisOne % states.size() << " " << strategyMemoryUsedSoFar << " backup.\n";
+                        // std::cerr << "Setting Strategy transitions for " << thisOne % states.size() << " " << strategyMemoryUsedSoFar << " backup.\n";
                         strategy[StrategyTransitionPredecessor(thisOne % states.size(),strategyMemoryUsedSoFar)] = StrategyTransitionChoice(chosenTransition,newData);
                     }
                 }
@@ -347,7 +347,7 @@ std::pair<std::map<StrategyTransitionPredecessor,StrategyTransitionChoice>,doubl
     for (auto a : winningOuterGoalStates) {
         fixedValues[a] = 1.0;
     }
-    std::vector<std::pair<double,unsigned int> > values = mdpForAnalysis.valueIteration(fixedValues);
+    std::vector<std::pair<double,unsigned int> > values = mdpForAnalysis.valueIteration(fixedValues,epsilon);
     qualityOfGeneratedImplementation = std::min(qualityOfGeneratedImplementation,values[initialState].first);
     for (unsigned int i=0;i<states.size();i++) {
         /* if (values[i].first>=raLevel) */ {
