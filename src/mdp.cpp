@@ -390,7 +390,10 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
                                     index = i;
                                 }
                             }
-                            if (index==-1) throw "Error: Did not find key.";
+                            if (index==-1) {
+                                std::ostringstream err; err << "Did not find key '" << varName << "'";
+                                throw err.str();
+                            }
                             if (varValue==baseMDP.states[edge.second].label[index]) {
                                 //std::cerr << "Found a complex edge match\n";
                                 edgeParityTargetState = a.second;
