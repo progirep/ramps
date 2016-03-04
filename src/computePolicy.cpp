@@ -51,8 +51,8 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
                     }
                 }
                 diff += std::abs(bestValue - newValues[i]);
-                newValues[i] = bestValue;
-            }
+                newValues[i] = std::nextafter(bestValue,0.0);
+            }            
         }
     }
 
@@ -74,7 +74,7 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
                     dir = j;
                 }
             }
-            result[i] = std::pair<double,unsigned int>(bestValue,dir);
+            result[i] = std::pair<double,unsigned int>(std::nextafter(bestValue,0.0),dir);
         }
     }
 
@@ -100,7 +100,7 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
                     dir = j;
                 }
             }
-            result[i] = std::pair<double,unsigned int>(bestValue,dir);
+            result[i] = std::pair<double,unsigned int>(std::nextafter(bestValue,0.0),dir);
         }
         assert(result[i].second < transitions[i].size());
     }
@@ -125,7 +125,7 @@ std::pair<std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionCho
     unsigned int nofTargetColorSwitchbacks = 0;
     StateSetType winningOuterGoalStates;
     unsigned int oldNofWinningOuterGoalStates;
-    double qualityOfGeneratedImplementation = 1.0;
+    double qualityOfGeneratedImplementation = 2.0;
     do {
         std::cerr << "Outer iteration!\n";
         oldNofWinningOuterGoalStates = winningOuterGoalStates.size();
