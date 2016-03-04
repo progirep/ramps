@@ -3,11 +3,11 @@
 # All data lines are of the form 'key=value'
 
 # When updating the position, now much noise to add?
-positionUpdateNoise = 0.1
+positionUpdateNoise = 0.08
 
 # InitialPosition
 initXA = 1
 initYA = 1
-initXB = 14
-initYB = 14
+initXB = 5
+initYB = 5
 

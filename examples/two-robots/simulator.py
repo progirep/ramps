@@ -231,7 +231,6 @@ with open(pngFileBasis+".tra","w") as transitionFile:
 # ==================================
 # Compute and read strategy/policy
 # ==================================
-sys.exit(1)
 if not os.path.exists(pngFileBasis+".strategy") or (os.path.getmtime(pngFileBasis+".params")>os.path.getmtime(pngFileBasis+".strategy")):
     with open(pngFileBasis+".strategy","wb") as out:
         rampsProcess = subprocess.Popen(["../../src/ramps",pngFileBasis]+rampsParameters, bufsize=1048768, stdin=None, stdout=out)
@@ -324,9 +323,9 @@ def actionLoop():
 
         # Obtain robot information for drawing
         if (policyState,policyData) in policy:
-            (robotX,robotY,direction) = reverseStateMapper[policy[(policyState,policyData)][0]]
+            (robotXA,robotYA,robotXB,robotYB,carryA,carryB) = reverseStateMapper[policy[(policyState,policyData)][0]]
         else:
-            (robotX,robotY,direction) = (-1,-1,-1) # Crashed
+            (robotXA,robotYA,robotXB,robotYB,carryA,carryB) = (-1,-1,-1,-1,-1,-1) # Crashed
             
         # Draw Field
         for x in xrange(0,xsize):
@@ -336,7 +335,7 @@ def actionLoop():
                 pygame.draw.rect(screenBuffer,color,((x+1)*MAGNIFY,(y+1)*MAGNIFY,MAGNIFY,MAGNIFY),0)
                 
         # Draw boundary
-        if robotX==-1:
+        if robotXA==-1:
             boundaryColor = (255,0,0)
         else:
             boundaryColor = (64,64,64)
@@ -348,10 +347,25 @@ def actionLoop():
 
 
         # Draw "Good" Robot
-        if robotX!=-1:
-            pygame.draw.circle(screenBuffer, (192,32,32), ((robotX+1)*MAGNIFY+MAGNIFY/2,(robotY+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-2, 0)
-            pygame.draw.circle(screenBuffer, (255,255,255), ((robotX+1)*MAGNIFY+MAGNIFY/2,(robotY+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-1, 1)
-            pygame.draw.circle(screenBuffer, (0,0,0), ((robotX+1)*MAGNIFY+MAGNIFY/2,(robotY+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3, 1)
+        if robotXA!=-1:
+            pygame.draw.circle(screenBuffer, (192,32,32), ((robotXA+1)*MAGNIFY+MAGNIFY/2,(robotYA+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-2, 0)
+            pygame.draw.circle(screenBuffer, (255,255,255), ((robotXA+1)*MAGNIFY+MAGNIFY/2,(robotYA+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-1, 1)
+            pygame.draw.circle(screenBuffer, (0,0,0), ((robotXA+1)*MAGNIFY+MAGNIFY/2,(robotYA+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3, 1)
+
+            pygame.draw.circle(screenBuffer, (192,192,32), ((robotXB+1)*MAGNIFY+MAGNIFY/2,(robotYB+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-2, 0)
+            pygame.draw.circle(screenBuffer, (255,255,255), ((robotXB+1)*MAGNIFY+MAGNIFY/2,(robotYB+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-1, 1)
+            pygame.draw.circle(screenBuffer, (0,0,0), ((robotXB+1)*MAGNIFY+MAGNIFY/2,(robotYB+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3, 1)
+
+        # Freight
+        if carryA==1:
+            pygame.draw.circle(screenBuffer, (30,192,192), ((robotXA+2)*MAGNIFY+MAGNIFY/2,(robotYA+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-2, 0)
+            pygame.draw.circle(screenBuffer, (255,255,255), ((robotXA+2)*MAGNIFY+MAGNIFY/2,(robotYA+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-1, 1)
+            pygame.draw.circle(screenBuffer, (0,0,0), ((robotXA+2)*MAGNIFY+MAGNIFY/2,(robotYA+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3, 1)
+        elif carryB==1:
+            pygame.draw.circle(screenBuffer, (200,200,200), ((robotXA+2)*MAGNIFY+MAGNIFY/2,(robotYA+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-2, 0)
+            pygame.draw.circle(screenBuffer, (255,255,255), ((robotXA+2)*MAGNIFY+MAGNIFY/2,(robotYA+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3-1, 1)
+            pygame.draw.circle(screenBuffer, (0,0,0), ((robotXA+2)*MAGNIFY+MAGNIFY/2,(robotYA+1)*MAGNIFY+MAGNIFY/2) , MAGNIFY/3, 1)
+
 
         # Draw cell frames
         for x in xrange(0,xsize):
@@ -364,7 +378,7 @@ def actionLoop():
         pygame.display.flip()
 
         # Update state
-        if (not isPaused) and robotX!=-1:
+        if (not isPaused) and robotXA!=-1:
             randomNumber = random.random()
             (mdpstate,decision,dataUpdate) = policy[(policyState,policyData)]
             transitionList = transitionLists[(mdpstate,decision)]
@@ -385,6 +399,7 @@ def actionLoop():
             # print policy[(policyState,policyData)]
             assert dest in policy[(policyState,policyData)][2]
             (policyState,policyData) = dataUpdate[dest]
+            # print "MDP", mdpstate, "PS/Data:",policyState,",",policyData, "decision",decision,"dataupdate",dataUpdate
                             
         # Make the transition
         if not isPaused:
