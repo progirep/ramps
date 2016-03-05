@@ -182,6 +182,7 @@ for xA in xrange(0,xsize):
                                     succA = computeSuccs(xA,yA,dirA)
                                     succB = computeSuccs(xB,yB,dirB)
                                     errorProb = 0.0
+                                    carryingSelfTransitionProb = 0.0
                                     thisAction = dirA*5+dirB
                                     for (destXA,destYA,probA) in succA:
                                         for (destXB,destYB,probB) in succB:
@@ -192,13 +193,18 @@ for xA in xrange(0,xsize):
                                             if destXA==-1 or destXB==-1:
                                                 errorProb += probA*probB
                                             elif destXA==destXB and destYA==destYB:
-                                                errorProb += probA*probB
+                                                if carryMode==1:
+                                                    carryingSelfTransitionProb += probA*probB
+                                                else:
+                                                    errorProb += probA*probB
                                             elif (imageData[destXA+destYA*xsize]==1) or (imageData[destXB+destYB*xsize]==1):
                                                 errorProb += probA*probB
                                             else:
                                                 transitionLines.append([sourceState,thisAction,stateMapper[(destXA,destYA,destXB,destYB,destCarryMode,0)],probA*probB])
                                     if errorProb>0:
                                         transitionLines.append([sourceState,thisAction,errorState,errorProb])
+                                    if carryingSelfTransitionProb>0:
+                                        transitionLines.append([sourceState,thisAction,sourceState,carryingSelfTransitionProb])
                          
                         # Picking up
                         if xB==xA+2 and yA==yB and (imageData[xA+1+yA*xsize]==2):
