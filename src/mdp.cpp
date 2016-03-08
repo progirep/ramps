@@ -399,6 +399,8 @@ ParityMDP::ParityMDP(std::string parityFilename, const MDP &baseMDP) {
                                 edgeParityTargetState = a.second;
                                 //std::cout << "Dest: " << a.second << std::endl;
                             }
+                        } else {
+                            throw "Action synchronization is currently not supported.";
                         }
                     }
                 }
