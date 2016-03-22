@@ -13,100 +13,204 @@
 typedef std::set<unsigned int> StateSetType;
 
 
-// Value Iteration
-std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<unsigned int, double> &fixedValues, double epsilon) const {
+/**
+ * @brief The Value iteration function for reachability MDPs. There are two variants of this function.
+ * @param fixedValues MDP states that are goals or non-goals
+ * @param epsilon The cutoff value for value iteration
+ * @param computePolicyEagerly Whether the strategy should be computed eagerly, i.e., at every step of the value iteration process. This is necessary
+ *        if we have MDPs with strongly connected components of states that have all the same value, as no strategy reconstruction
+ *        can be made from their values
+ * @return The state values and the policy
+ */
+std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<unsigned int, double> &fixedValues, double epsilon, bool computePolicyEagerly) const {
 
-    // Initialize result
-    std::vector<bool> touchable(states.size());
-    //double *oldValues = new double[states.size()];
-    double *newValues = new double[states.size()];
+    if (computePolicyEagerly) {
 
-    for (unsigned int i=0;i<states.size();i++) {
-        newValues[i] = 0.0;
-        touchable[i] = true;
-    }
-    for (auto &a : fixedValues) {
-        newValues[a.first] = a.second;
-        touchable[a.first] = false;
-    }
+        //=========================================
+        // Eager Policy Computation
+        //=========================================
 
-    // Perform iteration - this time don't write the best direction
-    double diff = 2*epsilon;
-    while (diff > epsilon) {
+        // Initialize result
+        std::vector<bool> touchable(states.size());
+        //double *oldValues = new double[states.size()];
+        double *newValues = new double[states.size()];
+        unsigned int *currentPolicy = new unsigned int[states.size()];
 
-        diff = 0.0;
+        for (unsigned int i=0;i<states.size();i++) {
+            newValues[i] = 0.0;
+            touchable[i] = true;
+            currentPolicy[i] = 0;
+        }
+        for (auto &a : fixedValues) {
+            newValues[a.first] = a.second;
+            touchable[a.first] = false;
+        }
 
-        #pragma omp parallel for reduction (+:diff)
+        // Perform iteration - this time don't write the best direction
+        double diff = 2*epsilon;
+        while (diff > epsilon) {
+
+            diff = 0.0;
+
+            #pragma omp parallel for reduction (+:diff)
+            for (unsigned int i=0;i<states.size();i++) {
+                if (touchable[i]) {
+                    double bestValue = 0.0;
+                    unsigned int bestDirection = (unsigned int)-1;
+                    for (unsigned int j=0;j<transitions[i].size();j++) {
+                        auto const &a = transitions[i][j];
+                        double newValue = 0.0;
+                        for (const auto &e : a.edges) {
+                            newValue += e.first*newValues[e.second];
+                        }
+                        if (newValue > bestValue) {
+                            bestValue = newValue;
+                            bestDirection = j;
+                        }
+                    }
+                    if (bestValue > newValues[i]) {
+                        diff += (bestValue - newValues[i]);
+                        newValues[i] = bestValue;
+                        currentPolicy[i] = bestDirection;
+                    }
+                }
+            }
+        }
+
+        // Now build the value+action result
+        std::vector<std::pair<double,unsigned int> > result(states.size());
+        #pragma omp parallel for
+        for (unsigned int i=0;i<states.size();i++) {
+            result[i] = std::pair<double,unsigned int>(newValues[i],currentPolicy[i]);
+        }
+
+        delete[] newValues;
+        delete[] currentPolicy;
+
+        // Now recompute all fixed-probability values
+        for (unsigned int i=0;i<states.size();i++) {
+            if (!(touchable[i])) {
+                double bestValue = 0.0;
+                unsigned int dir = 0;
+                for (unsigned int j=0;j<transitions[i].size();j++) {
+                    auto &a = transitions[i][j];
+                    double newValue = 0.0;
+                    for (auto &e : a.edges) {
+                        if (fixedValues.count(e.second)>0) {
+                            newValue += e.first*fixedValues.at(e.second);
+                        } else {
+                            newValue += e.first*result[e.second].first;
+                        }
+                    }
+                    if (newValue > bestValue) {
+                        bestValue = newValue;
+                        dir = j;
+                    }
+                }
+                result[i] = std::pair<double,unsigned int>(std::nextafter(bestValue,0.0),dir);
+            }
+            assert(result[i].second < transitions[i].size());
+        }
+
+        return result;
+
+    } else {
+
+        //=========================================
+        // Non-Eager Policy Computation
+        //=========================================
+
+        // Initialize result
+        std::vector<bool> touchable(states.size());
+        //double *oldValues = new double[states.size()];
+        double *newValues = new double[states.size()];
+
+        for (unsigned int i=0;i<states.size();i++) {
+            newValues[i] = 0.0;
+            touchable[i] = true;
+        }
+        for (auto &a : fixedValues) {
+            newValues[a.first] = a.second;
+            touchable[a.first] = false;
+        }
+
+        // Perform iteration - this time don't write the best direction
+        double diff = 2*epsilon;
+        while (diff > epsilon) {
+
+            diff = 0.0;
+
+            #pragma omp parallel for reduction (+:diff)
+            for (unsigned int i=0;i<states.size();i++) {
+                if (touchable[i]) {
+                    double bestValue = 0.0;
+                    for (unsigned int j=0;j<transitions[i].size();j++) {
+                        auto const &a = transitions[i][j];
+                        double newValue = 0.0;
+                        for (const auto &e : a.edges) {
+                            newValue += e.first*newValues[e.second];
+                        }
+                        if (newValue > bestValue) {
+                            bestValue = newValue;
+                        }
+                    }
+                    diff += std::abs(bestValue - newValues[i]);
+                    newValues[i] = std::nextafter(bestValue,0.0);
+                }
+            }
+        }
+
+        // Now build the value+action result
+        std::vector<std::pair<double,unsigned int> > result(states.size());
+        #pragma omp parallel for
         for (unsigned int i=0;i<states.size();i++) {
             if (touchable[i]) {
                 double bestValue = 0.0;
+                unsigned int dir = 0;
                 for (unsigned int j=0;j<transitions[i].size();j++) {
                     auto const &a = transitions[i][j];
                     double newValue = 0.0;
-                    for (const auto &e : a.edges) {
+                    for (auto &e : a.edges) {
                         newValue += e.first*newValues[e.second];
                     }
                     if (newValue > bestValue) {
                         bestValue = newValue;
+                        dir = j;
                     }
                 }
-                diff += std::abs(bestValue - newValues[i]);
-                newValues[i] = std::nextafter(bestValue,0.0);
-            }            
-        }
-    }
-
-    // Now build the value+action result
-    std::vector<std::pair<double,unsigned int> > result(states.size());
-    #pragma omp parallel for
-    for (unsigned int i=0;i<states.size();i++) {
-        if (touchable[i]) {
-            double bestValue = 0.0;
-            unsigned int dir = 0;
-            for (unsigned int j=0;j<transitions[i].size();j++) {
-                auto const &a = transitions[i][j];
-                double newValue = 0.0;
-                for (auto &e : a.edges) {
-                    newValue += e.first*newValues[e.second];
-                }
-                if (newValue > bestValue) {
-                    bestValue = newValue;
-                    dir = j;
-                }
+                result[i] = std::pair<double,unsigned int>(std::nextafter(bestValue,0.0),dir);
             }
-            result[i] = std::pair<double,unsigned int>(std::nextafter(bestValue,0.0),dir);
         }
-    }
 
-    delete[] newValues;
+        delete[] newValues;
 
-    // Now recompute all fixed-probability values
-    for (unsigned int i=0;i<states.size();i++) {
-        if (!(touchable[i])) {
-            double bestValue = 0.0;
-            unsigned int dir = 0;
-            for (unsigned int j=0;j<transitions[i].size();j++) {
-                auto &a = transitions[i][j];
-                double newValue = 0.0;
-                for (auto &e : a.edges) {
-                    if (fixedValues.count(e.second)>0) {
-                        newValue += e.first*fixedValues.at(e.second);
-                    } else {
-                        newValue += e.first*result[e.second].first;
+        // Now recompute all fixed-probability values
+        for (unsigned int i=0;i<states.size();i++) {
+            if (!(touchable[i])) {
+                double bestValue = 0.0;
+                unsigned int dir = 0;
+                for (unsigned int j=0;j<transitions[i].size();j++) {
+                    auto &a = transitions[i][j];
+                    double newValue = 0.0;
+                    for (auto &e : a.edges) {
+                        if (fixedValues.count(e.second)>0) {
+                            newValue += e.first*fixedValues.at(e.second);
+                        } else {
+                            newValue += e.first*result[e.second].first;
+                        }
+                    }
+                    if (newValue > bestValue) {
+                        bestValue = newValue;
+                        dir = j;
                     }
                 }
-                if (newValue > bestValue) {
-                    bestValue = newValue;
-                    dir = j;
-                }
+                result[i] = std::pair<double,unsigned int>(std::nextafter(bestValue,0.0),dir);
             }
-            result[i] = std::pair<double,unsigned int>(std::nextafter(bestValue,0.0),dir);
+            assert(result[i].second < transitions[i].size());
         }
-        assert(result[i].second < transitions[i].size());
+
+        return result;
     }
-
-    return result;
-
 }
 
 
@@ -115,7 +219,7 @@ std::vector<std::pair<double,unsigned int> > MDP::valueIteration(const std::map<
  * @param raLevel The minimum requested RA level.
  * @return a pair consisting of the RA quality of the strategy and the strategy itself.
  */
-std::pair<std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionChoice,StrategyTransitionPredecessorHash>,double> ParityMDP::computeRAPolicy(double raLevel, double epsilon) const {
+std::pair<std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionChoice,StrategyTransitionPredecessorHash>,double> ParityMDP::computeRAPolicy(double raLevel, double epsilon, bool computePolicyEagerly) const {
 
     // The final strategy
     std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionChoice,StrategyTransitionPredecessorHash> strategy;
@@ -216,7 +320,7 @@ std::pair<std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionCho
                 }
 
                 // 3. Perform Value iteration
-                values = mdpForAnalysis.valueIteration(fixedValues,epsilon);
+                values = mdpForAnalysis.valueIteration(fixedValues,epsilon,computePolicyEagerly);
                 assert(values.size()==states.size()*2);
 
                 // Debugging: Print
@@ -353,7 +457,7 @@ std::pair<std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionCho
     for (auto a : winningOuterGoalStates) {
         fixedValues[a] = 1.0;
     }
-    std::vector<std::pair<double,unsigned int> > values = mdpForAnalysis.valueIteration(fixedValues,epsilon);
+    std::vector<std::pair<double,unsigned int> > values = mdpForAnalysis.valueIteration(fixedValues,epsilon,computePolicyEagerly);
     qualityOfGeneratedImplementation = std::min(qualityOfGeneratedImplementation,values[initialState].first);
     for (unsigned int i=0;i<states.size();i++) {
         /* if (values[i].first>=raLevel) */ {

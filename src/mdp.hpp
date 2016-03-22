@@ -27,7 +27,7 @@ struct MDP {
     MDP() : initialState(-1) {}
     MDP(std::string baseFilename);
 
-    std::vector<std::pair<double,unsigned int> > valueIteration(const std::map<unsigned int, double> &fixedValues, double epsilon) const;
+    std::vector<std::pair<double,unsigned int> > valueIteration(const std::map<unsigned int, double> &fixedValues, double epsilon, bool computePolicyEagerly) const;
 
 };
 
@@ -82,7 +82,7 @@ private:
 public:
     ParityMDP(std::string parityFilename, const MDP &baseMDP);
     void dumpDot(std::ostream &output) const;
-    std::pair<std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionChoice,StrategyTransitionPredecessorHash>,double> computeRAPolicy(double raLevel, double epsilon) const;
+    std::pair<std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionChoice,StrategyTransitionPredecessorHash>,double> computeRAPolicy(double raLevel, double epsilon, bool computePolicyEagerly) const;
     void printPolicy(const std::unordered_map<StrategyTransitionPredecessor,StrategyTransitionChoice,StrategyTransitionPredecessorHash> &policy) const;
 };
 

@@ -105,6 +105,13 @@ After the first line, the behavior of the policy is given in the strategy file. 
 After the initial line of the block, a couple of lines starting with a "->" each follow. These describe for every successor MDP state to which state the strategy transitions and how the data value of the policy is updated. 
 
 
+Numeric Considerations
+----------------------
+Users of RAMPS need to be aware of the imprecision in the computations performed. The tool uses floating point numbers, which imposes an upper bound on the achievable precision of the computation. Since all operations performed are numerically quite benign, this is typically no problem in practice. However, RAMPS uses the OPENMP library to speed up the computation of the value iteration process over MDPs. In this context, the tool does not use synchronization primitives as value iteration is a self-correcting process. Occasionally, this lack of synchronization can however lead to the value iteration process terminating slightly earlier than specified in the search strategy. If this is a concern, RAMPS must be executed without multi-threading. The user can set the environment variable OMP_THREAD_LIMIT to 1 before calling RAMPS to achieve this.
+
+RAMPS is meant to be applied to MDPs in which there is a constant k such that from every state, there is a non-zero probability to reach an error state within k steps without reaching a goal state first for *any* possible policy. In such cases, the strategy can be recovered from the state values. This is faster than keeping track of the strategy while performing value iteration, which is why this is implemented in RAMPS. The approach can however lead to incorrect computed policies if there is a strongly connected component (SCC) in the MDP during the policy computation on which all states have the same values. In such a case, RAMPS can be started with the parameter "--strategyStoringValueIteration" to fix the issue. The computation becomes slower in this case, though.
+
+
 Demos
 =====
 
@@ -135,3 +142,9 @@ When the simulator window is displayed after strategy computation, the following
 - R: This key resets the simulation. This is especially helpful after a crash of the robot (which is represented by drawing the workspace on a red background)
 
 Note that if the call to RAMPS fails during the execution of "simulator.py", the generated strategy file must be deleted before "simulator.py" can be (sucessfully) called again.
+
+
+Two Robots
+----------
+In addition to the unicyle simulation script, RAMPS also comes with a two-robot example. The scanario and simulator files are the same as for the unicycle, and the key of the simulator are also the same. As there are now two robots, the atom names are different. Instead of being of the form "color2=0", they are now of the form ""color2A=0" and "color2B=0" to indicate also which robot they refer to.
+

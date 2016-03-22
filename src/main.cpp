@@ -15,6 +15,7 @@ int main(int nofArgs, const char **args) {
         std::string searchStrategy = "";
         double minQuality = 0.0;
         double maxQuality = 1.0;
+        bool computePolicyEagerly = false;
 
         for (int i=1;i<nofArgs;i++) {
             if (args[i][0]=='-') {
@@ -53,6 +54,8 @@ int main(int nofArgs, const char **args) {
                         std::cerr << "Error: Illegal floating point number after '--max'.\n";
                         return 1;
                     }
+                } else if (param=="--strategyStoringValueIteration") {
+                    computePolicyEagerly = true;
                 }
 
                 else {
@@ -76,7 +79,7 @@ int main(int nofArgs, const char **args) {
         }
 
         // Search strategy processing - including default setting
-        if (searchStrategy=="") searchStrategy = "b:0.05:0.0001";
+        if (searchStrategy=="") searchStrategy = "b:0.01:0.05";
         std::vector<std::tuple<char,double,double> > searchStrategyParts;
         {
             std::stringstream ssA(searchStrategy);
@@ -142,7 +145,7 @@ int main(int nofArgs, const char **args) {
             {
                 double mid = minQuality + std::get<1>(currentSearchStrategyTuple);
                 while (mid <= 1.0) {
-                    auto thisStrategy = parityMDP.computeRAPolicy(mid,epsilon);
+                    auto thisStrategy = parityMDP.computeRAPolicy(mid,epsilon,computePolicyEagerly);
                     std::cerr << "Quality computed: " << thisStrategy.second << std::endl;
                     if (thisStrategy.second>=mid) {
                         minQuality = thisStrategy.second;
@@ -159,7 +162,7 @@ int main(int nofArgs, const char **args) {
             {
                 while ((maxQuality-minQuality) > std::get<1>(currentSearchStrategyTuple)) {
                     double mid = (maxQuality+minQuality)/2;
-                    auto thisStrategy = parityMDP.computeRAPolicy(mid,epsilon);
+                    auto thisStrategy = parityMDP.computeRAPolicy(mid,epsilon,computePolicyEagerly);
                     std::cerr << "Quality computed: " << thisStrategy.second << ", asking for " << mid << std::endl;
                     if (thisStrategy.second>=mid) {
                         // foundStrategy
