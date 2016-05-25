@@ -1,1 +1,2 @@
-cd src; g++ -O3 -fopenmp -std=c++11 -march=native *.cpp -o ramps
+language: ruby
+script: cd src; g++ -O3 -fopenmp -std=c++11 -march=native *.cpp -o ramps
