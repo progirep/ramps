@@ -10,6 +10,16 @@ matrix:
           packages:
             - g++-5
       env: COMPILER=g++-5
+    - compiler: clang -fopenmp
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.6
+          packages:
+            - clang-3.6
+      # Clang 3.6 does not support openmp
+      env: COMPILER=clang++-3.6      
     - compiler: clang
       addons:
         apt:
@@ -18,12 +28,13 @@ matrix:
             - llvm-toolchain-precise-3.7
           packages:
             - clang-3.7
-      env: COMPILER=clang++-3.7
+            - libomp-dev
+      env: COMPILER=clang++-3.7 -fopenmp=libomp
 script:
   - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
   - sudo unlink /usr/bin/g++ && sudo ln -s /usr/bin/g++-5 /usr/bin/g++
   - cd src
-  - $COMPILER -O3 -fopenmp -std=c++11 -march=native *.cpp -o ramps
+  - $COMPILER -O3  -std=c++11 -march=native *.cpp -o ramps
   - cd ../examples
   - ../src/ramps flower_shaped_example_from_paper
   - ../src/ramps test2
