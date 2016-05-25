@@ -12,4 +12,6 @@ script:
   - sudo unlink /usr/bin/g++ && sudo ln -s /usr/bin/g++-5 /usr/bin/g++
   - gcc --version
   - cd src; g++ -O3 -fopenmp -std=c++11 -march=native *.cpp -o ramps
+  - cd examples; ../src/ramps flower_shaped_example_from_paper
+  - cd examples; ../src/test2
 
