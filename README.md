@@ -1,5 +1,7 @@
 RAMPS - RA MDP Solver
 ==============================
+[![Build Status](https://travis-ci.org/progirep/ramps.svg)](https://travis-ci.org/progirep/ramps.svg)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/a51a8cd3fc0f4c768501f20d915b6f45)](https://www.codacy.com/app/progirep/ramps?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=progirep/ramps&amp;utm_campaign=Badge_Grade)
 
 (C) 2016 by Ruediger Ehlers, licensed under GPLv3
 
