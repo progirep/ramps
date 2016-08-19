@@ -59,7 +59,7 @@ for a in open(parameterFileName,"r").readlines():
         posEqual = a.index("=")
         allParams[a[0:posEqual].strip()] = a[posEqual+1:].strip()
 
-# ==================================            
+# ==================================
 # Parse parameter file
 # ==================================
 initXA = int(allParams["initXA"])
@@ -156,8 +156,8 @@ def computeSuccs(xpos,ypos,direction):
     if errorProb > 0.0:
         succs.append((-1,-1,errorProb))
     return succs
-    
-                        
+
+
 # Iterate over all cells and compute transition probabilities
 transitionLines = []
 overallNofTransitions = 0
@@ -167,12 +167,12 @@ for xA in xrange(0,xsize):
             for yB in xrange(0,ysize):
                 if xA!=xB or yA!=yB:
                     if (imageData[xA+yA*xsize]!=1) and (imageData[xB+yB*xsize]!=1):
-            
+
                         # Which current carry modes are possible for this combination?
                         carryModes = [0]
                         if xB==xA+2 and yA==yB:
                             carryModes.append(1)
-                        
+
                         # Normal motion.
                         for carryMode in carryModes:
                             sourceState = stateMapper[(xA,yA,xB,yB,carryMode,0)]
@@ -205,27 +205,27 @@ for xA in xrange(0,xsize):
                                         transitionLines.append([sourceState,thisAction,errorState,errorProb])
                                     if carryingSelfTransitionProb>0:
                                         transitionLines.append([sourceState,thisAction,sourceState,carryingSelfTransitionProb])
-                         
+
                         # Picking up
                         if xB==xA+2 and yA==yB and (imageData[xA+1+yA*xsize]==2):
                             sourceState = stateMapper[(xA,yA,xB,yB,0,0)]
                             destState = stateMapper[(xA,yA,xB,yB,1,0)]
                             transitionLines.append([sourceState,25,destState,1.0])
                             overallNofTransitions += 1
-                         
+
                         # Dropping at the destination
                         if xB==xA+2 and yA==yB and (imageData[xA+1+yA*xsize]==3):
                             sourceState = stateMapper[(xA,yA,xB,yB,1,0)]
                             destState = stateMapper[(xA,yA,xB,yB,0,1)]
                             transitionLines.append([sourceState,25,destState,1.0])
-                            
+
                             # Recover after drop
                             sourceState = stateMapper[(xA,yA,xB,yB,0,1)]
                             destState = stateMapper[(xA,yA,xB,yB,0,0)]
                             transitionLines.append([sourceState,0,destState,1.0])
                             overallNofTransitions += 2
 
-                     
+
 # Print transitions file: It contains the transitions computed earlier PLUS an error state self loop
 with open(pngFileBasis+".tra","w") as transitionFile:
     transitionFile.write(str(len(stateMapper))+" "+str(overallNofTransitions+1)+" "+str(len(transitionLines)+1)+"\n")
@@ -244,7 +244,7 @@ if not os.path.exists(pngFileBasis+".strategy") or (os.path.getmtime(pngFileBasi
         if (returncode!=0):
             print >>sys.stderr, "RAMPS returned error code:",returncode
             sys.exit(1)
-        
+
 policy = {}
 currentPolicyState = None
 with open(pngFileBasis+".strategy","r") as strat:
@@ -277,7 +277,7 @@ for (a,b,c,d) in transitionLines:
         transitionLists[(a,b)] = [(c,d)]
     else:
         transitionLists[(a,b)].append((c,d))
-        
+
 # =========================================
 # Initialize interactive display
 # =========================================
@@ -298,15 +298,15 @@ def actionLoop():
     screenBuffer = pygame.Surface(screen.get_size())
     screenBuffer = screenBuffer.convert()
     screenBuffer.fill((64, 64, 64)) # Dark Gray
-    
+
     # Initialize Policy
     policyState = None
     policyData = None
-    
+
     isPaused = False
     speed = 10
     while 1:
-    
+
         resetInThisRound = False
 
         # Process events
@@ -322,7 +322,7 @@ def actionLoop():
             if (event.type == pygame.locals.KEYDOWN and event.key == pygame.locals.K_MINUS):
                 speed = max(speed-1,1)
 
-        # Update 
+        # Update
         if resetInThisRound or (policyState==None):
                 policyState = 0
                 policyData = 0
@@ -332,14 +332,14 @@ def actionLoop():
             (robotXA,robotYA,robotXB,robotYB,carryA,carryB) = reverseStateMapper[policy[(policyState,policyData)][0]]
         else:
             (robotXA,robotYA,robotXB,robotYB,carryA,carryB) = (-1,-1,-1,-1,-1,-1) # Crashed
-            
+
         # Draw Field
         for x in xrange(0,xsize):
             for y in xrange(0,ysize):
                 paletteColor = imageData[y*xsize+x]
                 color = palette[paletteColor*3:paletteColor*3+3]
                 pygame.draw.rect(screenBuffer,color,((x+1)*MAGNIFY,(y+1)*MAGNIFY,MAGNIFY,MAGNIFY),0)
-                
+
         # Draw boundary
         if robotXA==-1:
             boundaryColor = (255,0,0)
@@ -378,7 +378,7 @@ def actionLoop():
             for y in xrange(0,ysize):
                 pygame.draw.rect(screenBuffer,(0,0,0),((x+1)*MAGNIFY,(y+1)*MAGNIFY,MAGNIFY,MAGNIFY),1)
         pygame.draw.rect(screenBuffer,(0,0,0),(MAGNIFY-1,MAGNIFY-1,MAGNIFY*xsize+2,MAGNIFY*ysize+2),1)
-        
+
         # Flip!
         screen.blit(screenBuffer, (0, 0))
         pygame.display.flip()
@@ -406,7 +406,7 @@ def actionLoop():
             assert dest in policy[(policyState,policyData)][2]
             (policyState,policyData) = dataUpdate[dest]
             # print "MDP", mdpstate, "PS/Data:",policyState,",",policyData, "decision",decision,"dataupdate",dataUpdate
-                            
+
         # Make the transition
         if not isPaused:
             # Done

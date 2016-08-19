@@ -59,7 +59,7 @@ for a in open(parameterFileName,"r").readlines():
         posEqual = a.index("=")
         allParams[a[0:posEqual].strip()] = a[posEqual+1:].strip()
 
-# ==================================            
+# ==================================
 # Parse parameter file
 # ==================================
 nofDirections = int(allParams["nofDirections"])
@@ -156,7 +156,7 @@ def computeSuccs(xpos,ypos,direction):
     # for (a,b) in targetCells.iteritems():
     #       print a,":",b
     return targetCells
-                        
+
 # Iterate over all cells and compute transition probabilities
 transitionLines = []
 for x in xrange(0,xsize):
@@ -165,7 +165,7 @@ for x in xrange(0,xsize):
 
             # Choice 1: No change
             edgesNoChange = computeSuccs(x,y,d)
-                
+
             # Choice 0: Rotate -1
             rotMinus1 = d-1
             if rotMinus1 < 0:
@@ -183,13 +183,13 @@ for x in xrange(0,xsize):
                         dPrime = -1
                     if c>0.0 and probabilityDirectionChangeFail>0.0:
                         transitionLines.append([stateMapper[(x,y,d)],0,stateMapper[(a,b,dPrime)],c*probabilityDirectionChangeFail])
-            
+
             # Choice 1: No change
             for ((a,b),c) in edgesNoChange.iteritems():
                     dPrime = d
                     if (a==-1):
                         dPrime = -1
-                    if c>0:        
+                    if c>0:
                         transitionLines.append([stateMapper[(x,y,d)],1,stateMapper[(a,b,dPrime)],c])
 
             # Choice 0: Rotate 1
@@ -211,7 +211,7 @@ for x in xrange(0,xsize):
                         transitionLines.append([stateMapper[(x,y,d)],2,stateMapper[(a,b,dPrime)],c*probabilityDirectionChangeFail])
 
 
-                                
+
 # Print transitions file: It contains the transitions computed earlier PLUS an error state self loop
 with open(pngFileBasis+".tra","w") as transitionFile:
     transitionFile.write(str(len(stateMapper))+" "+str(len(stateMapper)*3-2)+" "+str(len(transitionLines)+1)+"\n")
@@ -230,7 +230,7 @@ if not os.path.exists(pngFileBasis+".strategy") or (os.path.getmtime(pngFileBasi
         if (returncode!=0):
             print >>sys.stderr, "RAMPS returned error code:",returncode
             sys.exit(1)
-        
+
 policy = {}
 currentPolicyState = None
 with open(pngFileBasis+".strategy","r") as strat:
@@ -263,7 +263,7 @@ for (a,b,c,d) in transitionLines:
         transitionLists[(a,b)] = [(c,d)]
     else:
         transitionLists[(a,b)].append((c,d))
-        
+
 # =========================================
 # Initialize interactive display
 # =========================================
@@ -284,15 +284,15 @@ def actionLoop():
     screenBuffer = pygame.Surface(screen.get_size())
     screenBuffer = screenBuffer.convert()
     screenBuffer.fill((64, 64, 64)) # Dark Gray
-    
+
     # Initialize Policy
     policyState = None
     policyData = None
-    
+
     isPaused = False
     speed = 10
     while 1:
-    
+
         resetInThisRound = False
 
         # Process events
@@ -308,7 +308,7 @@ def actionLoop():
             if (event.type == pygame.locals.KEYDOWN and event.key == pygame.locals.K_MINUS):
                 speed = max(speed-1,1)
 
-        # Update 
+        # Update
         if resetInThisRound or (policyState==None):
                 policyState = 0
                 policyData = 0
@@ -318,14 +318,14 @@ def actionLoop():
             (robotX,robotY,direction) = reverseStateMapper[policy[(policyState,policyData)][0]]
         else:
             (robotX,robotY,direction) = (-1,-1,-1) # Crashed
-            
+
         # Draw Field
         for x in xrange(0,xsize):
             for y in xrange(0,ysize):
                 paletteColor = imageData[y*xsize+x]
                 color = palette[paletteColor*3:paletteColor*3+3]
                 pygame.draw.rect(screenBuffer,color,((x+1)*MAGNIFY,(y+1)*MAGNIFY,MAGNIFY,MAGNIFY),0)
-                
+
         # Draw boundary
         if robotX==-1:
             boundaryColor = (255,0,0)
@@ -349,7 +349,7 @@ def actionLoop():
             for y in xrange(0,ysize):
                 pygame.draw.rect(screenBuffer,(0,0,0),((x+1)*MAGNIFY,(y+1)*MAGNIFY,MAGNIFY,MAGNIFY),1)
         pygame.draw.rect(screenBuffer,(0,0,0),(MAGNIFY-1,MAGNIFY-1,MAGNIFY*xsize+2,MAGNIFY*ysize+2),1)
-        
+
         # Flip!
         screen.blit(screenBuffer, (0, 0))
         pygame.display.flip()
@@ -376,7 +376,7 @@ def actionLoop():
             # print policy[(policyState,policyData)]
             assert dest in policy[(policyState,policyData)][2]
             (policyState,policyData) = dataUpdate[dest]
-                            
+
         # Make the transition
         if not isPaused:
             # Done
