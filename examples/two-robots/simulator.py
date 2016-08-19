@@ -4,7 +4,7 @@
 
 import math
 import os
-import sys, code
+import sys
 import resource
 import subprocess
 import signal
@@ -13,7 +13,7 @@ import copy
 import itertools
 import random
 from PIL import Image
-import os, pygame, pygame.locals
+import pygame, pygame.locals
 
 # ==================================
 # Settings
@@ -32,7 +32,6 @@ rampsParameters = sys.argv[2:]
 # ==================================
 # Read input image
 # ==================================
-import os,sys
 pngfile = Image.open(specFile)
 pngFileBasis = specFile[0:specFile.rfind(".png")]
 # print "Size of Workspace:",pngfile.size
